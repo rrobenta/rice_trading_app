@@ -2,16 +2,18 @@
   "name": "rice-trading-app",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "mobile": "npm start --workspace=client",
+    "android": "npm run android --workspace=client",
+    "ios": "npm run ios --workspace=client",
+    "server": "npm run dev --workspace=server",
+    "build:server": "npm run build --workspace=server",
+    "db:migrate": "npm run db:migrate --workspace=server",
+    "db:seed": "npm run db:seed --workspace=server",
+    "db:studio": "npm run db:studio --workspace=server"
+  },
   "workspaces": [
     "client",
     "server"
-  ],
-  "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
-    "build": "npm run build --workspace=server && npm run build --workspace=client",
-    "install:all": "npm install && npm install --workspace=client && npm install --workspace=server"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
+  ]
 }

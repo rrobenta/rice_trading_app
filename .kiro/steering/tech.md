@@ -1,38 +1,38 @@
 # Tech Stack
 
-## Stack
+## Mobile Client (client/)
 
-- **Frontend**: React 18 + TypeScript (Vite, React Router v6, Recharts)
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Auth**: JWT (jsonwebtoken + bcryptjs)
-- **Monorepo**: `client/` and `server/` as npm workspaces
+- **Framework**: React Native via Expo SDK 51
+- **Navigation**: Expo Router v3 (file-based, like Next.js)
+- **Charts**: react-native-gifted-charts + react-native-svg
+- **Storage**: AsyncStorage (JWT token)
+- **HTTP**: Axios with JWT interceptor
+
+## Backend (server/)
+
+- **Runtime**: Node.js + Express + TypeScript
+- **Database**: PostgreSQL + Prisma ORM
+- **Auth**: JWT (jsonwebtoken) + bcryptjs
+- **Decimals**: decimal.js — never use floats for prices
 
 ## Common Commands
 
 ```bash
-# Install all dependencies
-npm install
+# Server
+npm run server             # Start Express API on :3001
+npm run db:migrate         # Run Prisma migrations
+npm run db:seed            # Seed demo data
+npm run db:studio          # Open Prisma Studio
 
-# Run both client and server in dev mode
-npm run dev
-
-# Individual workspaces
-npm run dev --workspace=server     # Express API on :3001
-npm run dev --workspace=client     # Vite React on :5173
-
-# Database
-npm run db:migrate --workspace=server    # Run Prisma migrations
-npm run db:seed --workspace=server       # Seed demo data
-npm run db:studio --workspace=server     # Open Prisma Studio
-
-# Build
-npm run build
+# Mobile
+npm run mobile             # Start Expo dev server (scan QR with Expo Go)
+npm run android            # Open on Android emulator
+npm run ios                # Open on iOS simulator (Mac only)
 ```
 
 ## Notes
 
-- All monetary/price values use `decimal.js` and Prisma `Decimal` type — never native floats
-- Environment variables via `.env` in the root — copy `.env.example` and fill in values
-- TypeScript strict mode enabled on both client and server
-- Vite dev server proxies `/api` to `localhost:3001` — no CORS issues in dev
+- Set `EXPO_PUBLIC_API_URL` in `client/.env` to your machine's local IP (not localhost) when testing on a real device
+- All monetary values use `decimal.js` on server, string formatting on client — never `Number` for price math
+- Expo Router uses file-based routing: `app/(tabs)/index.tsx` → `/` tab, `app/listing/[id].tsx` → `/listing/:id`
+- Environment variables prefixed `EXPO_PUBLIC_` are available client-side in Expo

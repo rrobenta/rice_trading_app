@@ -1,36 +1,41 @@
 # 🌾 Rice Trading Platform
 
-A full-stack web application for buying and selling rice commodities. Traders, buyers, and suppliers can manage listings, place orders, track trades, and monitor market pricing trends.
+A full-stack **mobile app** for buying and selling rice commodities. Traders, buyers, and suppliers can manage listings, place orders, track trades, and monitor live market pricing — from their phone.
+
+---
+
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Mobile | React Native + Expo (SDK 51), Expo Router v3 |
+| Charts | react-native-gifted-charts |
+| Backend | Node.js + Express + TypeScript |
+| Database | PostgreSQL + Prisma ORM |
+| Auth | JWT + bcryptjs, stored in AsyncStorage |
+| Decimals | decimal.js (no float math for prices) |
 
 ---
 
 ## Features
 
-- **Market Overview** — Live price chart with 30-day history per rice variety
-- **Listings** — Browse and create rice sale listings with grade, moisture, location filters
-- **Orders** — Place BUY/SELL orders with automatic price-time priority matching engine
-- **Trades** — Full trade history with buyer/seller roles and status management
-- **Auth** — JWT-based registration and login (Trader / Buyer / Supplier roles)
-- **Profile** — Account stats and editable contact info
-
----
-
-## Tech Stack
-
-| Layer | Tech |
-|---|---|
-| Frontend | React 18 + TypeScript, Vite, React Router v6, Recharts |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL + Prisma ORM |
-| Auth | JWT + bcryptjs |
-| Decimals | decimal.js (all price/quantity values) |
+- **Dashboard** — market snapshot cards, recent orders & trades, quick-action buttons
+- **Market** — per-variety price charts (7/14/30/90 day), live % change
+- **Listings** — infinite-scroll browse with search + variety filter, create listing form
+- **Orders** — BUY/SELL orders with fill progress bar, cancel action, trade history tab
+- **Profile** — stats, editable account info, sign out
+- **Auth** — login + register with role selection (Trader / Buyer / Supplier)
+- **Matching engine** — orders auto-fill at price-time priority when placed
 
 ---
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or later
-- [PostgreSQL](https://www.postgresql.org/) v14 or later
+- [Node.js](https://nodejs.org/) v18+
+- [Expo CLI](https://docs.expo.dev/get-started/installation/): `npm install -g expo-cli`
+- [PostgreSQL](https://www.postgresql.org/) v14+
+- iOS: Xcode (Mac only) or [Expo Go](https://expo.dev/client) app
+- Android: Android Studio emulator or [Expo Go](https://expo.dev/client) app
 
 ---
 
@@ -40,83 +45,61 @@ A full-stack web application for buying and selling rice commodities. Traders, b
 
 ```bash
 npm install
+cd client && npx expo install   # ensures correct peer deps
 ```
 
-### 2. Configure environment
+### 2. Configure the server
 
 ```bash
-cp .env.example .env
+# Edit server/.env
+DATABASE_URL="postgresql://user:password@localhost:5432/rice_trading_db"
+JWT_SECRET="your-random-secret"
+PORT=3001
 ```
 
-Edit `.env` and set your database connection string:
-
-```
-DATABASE_URL="postgresql://youruser:yourpassword@localhost:5432/rice_trading_db"
-JWT_SECRET="change-this-to-a-long-random-string"
-```
-
-### 3. Create the database
+### 3. Run migrations + seed
 
 ```bash
-# In PostgreSQL
-createdb rice_trading_db
+npm run db:migrate
+npm run db:seed
 ```
 
-### 4. Run migrations
+### 4. Configure the mobile API URL
 
 ```bash
-npm run db:migrate --workspace=server
+# Edit client/.env
+# Use your machine's local IP (not localhost) so the device can reach it
+EXPO_PUBLIC_API_URL=http://192.168.1.X:3001/api
 ```
 
-### 5. Seed demo data
+> Find your IP: `ipconfig` on Windows → look for IPv4 Address
+
+### 5. Start the server
 
 ```bash
-npm run db:seed --workspace=server
+npm run server
 ```
 
-This creates 5 rice varieties, 3 demo accounts, sample listings, and 30 days of price history.
-
-**Demo accounts (password: `password123`)**
-| Email | Role |
-|---|---|
-| supplier@example.com | SUPPLIER |
-| buyer@example.com | BUYER |
-| trader@example.com | TRADER |
-
-### 6. Start the app
+### 6. Start the mobile app
 
 ```bash
-npm run dev
+npm run mobile
+# or for a specific platform:
+npm run android
+npm run ios
 ```
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001/api
-- Prisma Studio: `npm run db:studio --workspace=server`
+Scan the QR code with **Expo Go** on your phone, or press `a` for Android emulator / `i` for iOS simulator.
 
 ---
 
-## API Endpoints
+## Demo Accounts (after seeding)
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | — | Create account |
-| POST | `/api/auth/login` | — | Sign in |
-| GET | `/api/auth/me` | ✓ | Current user |
-| GET | `/api/listings` | — | List all active listings |
-| POST | `/api/listings` | ✓ | Create listing |
-| GET | `/api/listings/:id` | — | Listing detail |
-| PUT | `/api/listings/:id` | ✓ | Update listing |
-| DELETE | `/api/listings/:id` | ✓ | Deactivate listing |
-| GET | `/api/orders` | ✓ | My orders |
-| POST | `/api/orders` | ✓ | Place order (triggers matching) |
-| PATCH | `/api/orders/:id/cancel` | ✓ | Cancel order |
-| GET | `/api/trades` | ✓ | My trades |
-| PATCH | `/api/trades/:id/status` | ✓ | Mark complete/disputed |
-| GET | `/api/market/varieties` | — | All rice varieties |
-| GET | `/api/market/prices` | — | Price history |
-| GET | `/api/market/summary` | — | Market snapshot with % change |
-| GET | `/api/users/profile` | ✓ | Profile + stats |
-| PUT | `/api/users/profile` | ✓ | Update profile |
+| Email | Role | Password |
+|---|---|---|
+| supplier@example.com | SUPPLIER | password123 |
+| buyer@example.com | BUYER | password123 |
+| trader@example.com | TRADER | password123 |
 
 ---
 
@@ -124,37 +107,55 @@ npm run dev
 
 ```
 rice_trading_app/
-├── client/                    # React frontend (Vite)
-│   └── src/
-│       ├── components/        # Layout, shared UI
-│       ├── context/           # AuthContext
-│       ├── lib/               # Axios instance
-│       ├── pages/             # Route-level page components
-│       ├── styles/            # Global CSS
-│       └── types/             # Shared TypeScript types
+├── client/                        # Expo React Native app
+│   ├── app/                       # Expo Router file-based routes
+│   │   ├── _layout.tsx            # Root layout + auth guard
+│   │   ├── (auth)/                # Login, Register screens
+│   │   ├── (tabs)/                # Tab bar: Dashboard, Market, Listings, Orders, Profile
+│   │   ├── listing/[id].tsx       # Listing detail
+│   │   ├── listing/new.tsx        # Create listing form
+│   │   ├── order/new.tsx          # Place order form
+│   │   └── trade/[id].tsx         # Trade detail
+│   ├── src/
+│   │   ├── components/            # Card, Badge, Button, Input, LoadingScreen
+│   │   ├── constants/theme.ts     # Colors, spacing, typography, shadows
+│   │   ├── context/AuthContext.tsx
+│   │   ├── lib/api.ts             # Axios instance with JWT interceptors
+│   │   └── types/index.ts
+│   ├── assets/                    # App icons + splash (replace with real assets)
+│   └── app.json                   # Expo config
 │
-├── server/                    # Express backend
-│   ├── prisma/
-│   │   └── schema.prisma      # DB schema
+├── server/                        # Express + TypeScript API
+│   ├── prisma/schema.prisma
 │   └── src/
-│       ├── api/               # Routes + controllers per feature
-│       ├── db/                # Prisma client + seed
-│       ├── middleware/        # Auth, error handler
-│       ├── types/             # AuthRequest, pagination types
-│       └── utils/             # Pagination helpers
+│       ├── api/                   # auth, listings, orders, trades, market, users
+│       ├── db/                    # Prisma client + seed
+│       ├── middleware/            # JWT auth, error handler
+│       └── index.ts
 │
-├── .env.example
-└── package.json               # npm workspaces root
+└── package.json                   # npm workspaces root
 ```
 
 ---
 
-## Order Matching
+## Building for Production
 
-When a new order is placed, the server runs a price-time priority matching engine:
+```bash
+# Install EAS CLI
+npm install -g eas-cli
+eas login
 
-- **BUY** order matches against open **SELL** orders at or below the buy price
-- **SELL** order matches against open **BUY** orders at or above the sell price
-- Orders fill partially if quantity allows, updating status to `PARTIALLY_FILLED`
-- Each match creates a `Trade` record and a `PriceHistory` entry
-- All matching logic runs inside a Prisma transaction for consistency
+# Configure your project
+cd client
+eas build:configure
+
+# Build
+eas build --platform android
+eas build --platform ios
+```
+
+---
+
+## API Summary
+
+The mobile app consumes the same REST API as the web version — all endpoints documented in the server README. Set `EXPO_PUBLIC_API_URL` to your deployed server URL for production builds.

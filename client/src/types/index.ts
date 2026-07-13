@@ -11,11 +11,7 @@ export interface User {
   company?: string;
   phone?: string;
   createdAt: string;
-  stats?: {
-    totalListings: number;
-    totalOrders: number;
-    totalTrades: number;
-  };
+  stats?: { totalListings: number; totalOrders: number; totalTrades: number };
 }
 
 export interface RiceVariety {
@@ -35,11 +31,10 @@ export interface Listing {
   grade?: string;
   moisture?: string;
   location?: string;
-  imageUrl?: string;
   isActive: boolean;
   createdAt: string;
   variety: RiceVariety;
-  seller: { id: string; name: string; company?: string };
+  seller: { id: string; name: string; company?: string; phone?: string };
 }
 
 export interface Order {

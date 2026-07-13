@@ -4,59 +4,66 @@
 
 ```
 rice_trading_app/
-├── .kiro/
-│   └── steering/              # AI assistant guidance files
-├── client/                    # React 18 + TypeScript frontend (Vite)
-│   ├── public/
-│   │   └── favicon.svg
+├── .kiro/steering/
+├── client/                        # Expo React Native mobile app
+│   ├── app/                       # Expo Router file-based routes
+│   │   ├── _layout.tsx            # Root: AuthProvider + auth guard + Stack
+│   │   ├── (auth)/
+│   │   │   ├── _layout.tsx
+│   │   │   ├── login.tsx
+│   │   │   └── register.tsx
+│   │   ├── (tabs)/
+│   │   │   ├── _layout.tsx        # Bottom tab bar config
+│   │   │   ├── index.tsx          # Dashboard
+│   │   │   ├── market.tsx         # Price charts
+│   │   │   ├── listings.tsx       # Browse listings
+│   │   │   ├── orders.tsx         # Orders + trades tabs
+│   │   │   └── profile.tsx        # Profile + stats
+│   │   ├── listing/
+│   │   │   ├── [id].tsx           # Listing detail
+│   │   │   └── new.tsx            # Create listing
+│   │   ├── order/
+│   │   │   └── new.tsx            # Place order
+│   │   └── trade/
+│   │       └── [id].tsx           # Trade detail
 │   ├── src/
-│   │   ├── components/        # Shared UI (Layout, nav)
-│   │   ├── context/           # React context (AuthContext)
-│   │   ├── lib/               # Axios API client
-│   │   ├── pages/             # One file per route
-│   │   ├── styles/            # globals.css (CSS custom properties)
-│   │   └── types/             # Shared TypeScript types
-│   ├── index.html
-│   ├── vite.config.ts
+│   │   ├── components/            # Card, Badge, Button, Input, LoadingScreen
+│   │   ├── constants/theme.ts     # Design tokens (colors, spacing, fonts, shadows)
+│   │   ├── context/AuthContext.tsx
+│   │   ├── lib/api.ts
+│   │   └── types/index.ts
+│   ├── assets/                    # icon.png, splash.png (replace placeholders)
+│   ├── app.json
 │   └── package.json
 │
-├── server/                    # Express + TypeScript backend
-│   ├── prisma/
-│   │   └── schema.prisma      # PostgreSQL schema (Prisma)
+├── server/                        # Express + TypeScript REST API
+│   ├── prisma/schema.prisma
 │   └── src/
-│       ├── api/               # Feature folders: auth, listings, orders, trades, market, users
-│       │   └── <feature>/
-│       │       ├── <feature>.routes.ts
-│       │       └── <feature>.controller.ts
-│       ├── db/
-│       │   ├── prisma.ts      # Singleton Prisma client
-│       │   └── seed.ts        # Demo data seeder
-│       ├── middleware/
-│       │   ├── auth.ts        # JWT authenticate + requireRole
-│       │   └── error-handler.ts
-│       ├── types/             # AuthRequest, pagination types
-│       ├── utils/             # getPaginationParams, buildPaginatedResponse
-│       └── index.ts           # Express app entry point
+│       ├── api/
+│       │   ├── auth/              # login, register, /me
+│       │   ├── listings/          # CRUD + filters
+│       │   ├── orders/            # Place + match + cancel
+│       │   ├── trades/            # History + status
+│       │   ├── market/            # Varieties + price history + summary
+│       │   └── users/             # Profile
+│       ├── db/prisma.ts
+│       ├── db/seed.ts
+│       ├── middleware/auth.ts
+│       ├── middleware/error-handler.ts
+│       ├── types/index.ts
+│       ├── utils/pagination.ts
+│       └── index.ts
 │   └── package.json
 │
+├── package.json                   # npm workspaces root
 ├── .env.example
-├── .gitignore
-├── package.json               # npm workspaces root
 └── README.md
 ```
 
 ## Conventions
 
-- **Feature folders** in `server/src/api/` — each has its own routes + controller
-- **Route handlers stay thin** — all logic lives in the controller
-- **Pages are flat** in `client/src/pages/` — one file per route
-- **CSS**: utility classes in `globals.css`, scoped styles via CSS Modules (`.module.css`)
-- **No floating point** for money — use `decimal.js` on the server, format strings on the client
-
-## Naming
-
-- Files and folders: `kebab-case`
-- React components: `PascalCase`
-- Functions and variables: `camelCase`
-- Constants: `UPPER_SNAKE_CASE`
-- Prisma models: `PascalCase`
+- **Expo Router** — route = file. Group folders `(auth)` and `(tabs)` don't add path segments
+- **Screens** live in `app/` — shared logic/components live in `src/`
+- **Design tokens** in `src/constants/theme.ts` — never hardcode colors or sizes inline
+- **Thin screens** — data fetching in the screen component, UI logic in components
+- **Naming**: files `kebab-case`, components `PascalCase`, functions `camelCase`
