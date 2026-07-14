@@ -10,7 +10,7 @@ export default function OrdersPage() {
 
       <div className="segment-ctrl mb-2">
         <button className="segment-btn active">My Orders</button>
-        <button className="segment-btn">Trade History</button>
+        <button className="segment-btn">Sales</button>
       </div>
 
       {/* Sample orders */}

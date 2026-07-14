@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CreateListingPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: '', description: '', varietyId: '', pricePerKg: '', quantityKg: '', minOrderKg: '', grade: '', moisture: '', location: '' });
+  const [form, setForm] = useState({ title: '', photo: '', sellPrice: '', boughtFor: '', batchDate: '' });
+  const [preview, setPreview] = useState<string | null>(null);
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }));
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+      setForm(f => ({ ...f, photo: file.name }));
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -16,28 +25,44 @@ export default function CreateListingPage() {
     <div>
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>New Listing</h1>
       <form onSubmit={handleSubmit}>
-        <div className="field"><label>Title *</label><input value={form.title} onChange={set('title')} required placeholder="Premium Jasmine Rice Grade A" /></div>
-        <div className="field"><label>Description</label><textarea value={form.description} onChange={set('description')} rows={3} placeholder="Quality details…" /></div>
-        <div className="field"><label>Rice Variety *</label>
-          <select value={form.varietyId} onChange={set('varietyId')}>
-            <option value="jasmine">Jasmine Rice</option>
-            <option value="basmati">Basmati Rice</option>
-            <option value="parboiled">Parboiled Rice</option>
-            <option value="brown">Brown Rice</option>
-          </select>
+        <div className="field">
+          <label>Title *</label>
+          <input value={form.title} onChange={set('title')} required placeholder="e.g. Jasmine Rice 50kg Sack" />
         </div>
+
+        <div className="field">
+          <label>Photo</label>
+          <input type="file" accept="image/*" onChange={handlePhoto} style={{ padding: 8 }} />
+          {preview && (
+            <img src={preview} alt="Preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8, marginTop: 8 }} />
+          )}
+        </div>
+
         <div className="row-2">
-          <div className="field"><label>Price/kg (USD) *</label><input value={form.pricePerKg} onChange={set('pricePerKg')} type="number" step="0.0001" placeholder="1.8500" /></div>
-          <div className="field"><label>Quantity (kg) *</label><input value={form.quantityKg} onChange={set('quantityKg')} type="number" step="0.01" placeholder="50000" /></div>
+          <div className="field">
+            <label>Sell Price *</label>
+            <input value={form.sellPrice} onChange={set('sellPrice')} type="number" step="0.01" min="0" required placeholder="0.00" />
+          </div>
+          <div className="field">
+            <label>Bought For *</label>
+            <input value={form.boughtFor} onChange={set('boughtFor')} type="number" step="0.01" min="0" required placeholder="0.00" />
+          </div>
         </div>
-        <div className="row-2">
-          <div className="field"><label>Min. order (kg)</label><input value={form.minOrderKg} onChange={set('minOrderKg')} type="number" placeholder="1000" /></div>
-          <div className="field"><label>Grade</label><input value={form.grade} onChange={set('grade')} placeholder="Grade A" /></div>
+
+        <div className="field">
+          <label>Batch Date *</label>
+          <input type="date" value={form.batchDate} onChange={set('batchDate')} required />
         </div>
-        <div className="row-2">
-          <div className="field"><label>Moisture (%)</label><input value={form.moisture} onChange={set('moisture')} type="number" step="0.1" placeholder="14.0" /></div>
-          <div className="field"><label>Location</label><input value={form.location} onChange={set('location')} placeholder="City, Country" /></div>
-        </div>
+
+        {form.sellPrice && form.boughtFor && (
+          <div className="card mb-2" style={{ background: parseFloat(form.sellPrice) > parseFloat(form.boughtFor) ? '#e8f5e9' : '#ffe8e8', textAlign: 'center' }}>
+            <p className="text-xs text-muted">Profit per unit</p>
+            <p style={{ fontSize: 20, fontWeight: 800, color: parseFloat(form.sellPrice) > parseFloat(form.boughtFor) ? 'var(--buy)' : 'var(--sell)' }}>
+              ${(parseFloat(form.sellPrice || '0') - parseFloat(form.boughtFor || '0')).toFixed(2)}
+            </p>
+          </div>
+        )}
+
         <button type="submit" className="btn btn-primary btn-full">Create Listing</button>
         <button type="button" className="btn btn-ghost btn-full mt-1" onClick={() => navigate('/listings')}>Cancel</button>
       </form>

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import AppShell from './components/AppShell';
 import DashboardPage from './pages/DashboardPage';
-import MarketPage from './pages/MarketPage';
 import ListingsPage from './pages/ListingsPage';
 import ListingDetailPage from './pages/ListingDetailPage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -16,7 +15,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<AppShell />}>
         <Route index element={<DashboardPage />} />
-        <Route path="market" element={<MarketPage />} />
         <Route path="listings" element={<ListingsPage />} />
         <Route path="listings/new" element={<CreateListingPage />} />
         <Route path="listings/:id" element={<ListingDetailPage />} />
