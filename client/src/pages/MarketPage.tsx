@@ -5,25 +5,45 @@ import { RiceVariety, PricePoint, MarketSummaryItem } from '../types';
 
 const COLORS = ['#2d6a4f', '#52b788', '#f4a261', '#e76f51', '#457b9d'];
 
+// Mock data for when the API isn't available
+const MOCK_SUMMARY: MarketSummaryItem[] = [
+  { variety: { id: '1', name: 'Jasmine Rice', origin: 'Thailand' }, currentPrice: '1.8520', changePct: '1.24', change: '0.0227', openOrders: 12 },
+  { variety: { id: '2', name: 'Basmati Rice', origin: 'India' }, currentPrice: '2.2150', changePct: '0.87', change: '0.0192', openOrders: 8 },
+  { variety: { id: '3', name: 'Parboiled Rice', origin: 'Various' }, currentPrice: '0.9320', changePct: '-0.45', change: '-0.0042', openOrders: 5 },
+];
+
+function generateMockHistory(): PricePoint[] {
+  const points: PricePoint[] = [];
+  const now = Date.now();
+  for (let i = 30; i >= 0; i--) {
+    const date = new Date(now - i * 86400000).toISOString();
+    points.push({ varietyName: 'Jasmine Rice', pricePerKg: (1.75 + Math.random() * 0.2).toFixed(4), volumeKg: '12000', recordedAt: date });
+    points.push({ varietyName: 'Basmati Rice', pricePerKg: (2.1 + Math.random() * 0.25).toFixed(4), volumeKg: '8000', recordedAt: date });
+    points.push({ varietyName: 'Parboiled Rice', pricePerKg: (0.85 + Math.random() * 0.15).toFixed(4), volumeKg: '20000', recordedAt: date });
+  }
+  return points;
+}
+
 export default function MarketPage() {
-  const [varieties, setVarieties] = useState<RiceVariety[]>([]);
-  const [summary, setSummary] = useState<MarketSummaryItem[]>([]);
-  const [history, setHistory] = useState<PricePoint[]>([]);
+  const [summary, setSummary] = useState<MarketSummaryItem[]>(MOCK_SUMMARY);
+  const [history, setHistory] = useState<PricePoint[]>(generateMockHistory());
+  const [varieties] = useState<RiceVariety[]>(MOCK_SUMMARY.map(s => s.variety));
   const [selectedVariety, setSelectedVariety] = useState('');
   const [days, setDays] = useState('30');
-  const [loading, setLoading] = useState(true);
+  const [apiAvailable, setApiAvailable] = useState(false);
 
   useEffect(() => {
     Promise.all([api.get('/market/varieties'), api.get('/market/summary')])
-      .then(([v, s]) => { setVarieties(v.data); setSummary(s.data); })
-      .finally(() => setLoading(false));
+      .then(([v, s]) => { setSummary(s.data); setApiAvailable(true); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (!apiAvailable) return;
     const params = new URLSearchParams({ days });
     if (selectedVariety) params.set('variety', selectedVariety);
-    api.get(`/market/prices?${params}`).then(r => setHistory(r.data));
-  }, [selectedVariety, days]);
+    api.get(`/market/prices?${params}`).then(r => setHistory(r.data)).catch(() => {});
+  }, [selectedVariety, days, apiAvailable]);
 
   const chartData = (() => {
     const byDate: Record<string, Record<string, number>> = {};
@@ -37,13 +57,10 @@ export default function MarketPage() {
 
   const chartVarieties = selectedVariety ? [selectedVariety] : [...new Set(history.map(h => h.varietyName))];
 
-  if (loading) return <p className="text-muted text-center mt-2">Loading…</p>;
-
   return (
     <div>
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>Market</h1>
 
-      {/* Summary */}
       {summary.map((item, i) => {
         const pct = parseFloat(item.changePct ?? '0');
         const up = pct >= 0;
@@ -61,7 +78,6 @@ export default function MarketPage() {
         );
       })}
 
-      {/* Chart */}
       <div className="card mt-2">
         <div className="flex justify-between items-center mb-1">
           <h2 className="text-sm font-bold">Price History</h2>
@@ -92,6 +108,10 @@ export default function MarketPage() {
           <p className="text-sm text-muted text-center" style={{ padding: 32 }}>No price data</p>
         )}
       </div>
+
+      {!apiAvailable && (
+        <p className="text-xs text-muted text-center mt-2">Showing sample data — deploy the backend for live prices</p>
+      )}
     </div>
   );
 }
