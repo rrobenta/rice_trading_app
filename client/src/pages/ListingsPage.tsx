@@ -1,32 +1,57 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../lib/api';
-import { Listing, PaginatedResponse } from '../types';
 
-const MOCK_LISTINGS: Listing[] = [
-  { id: '1', title: 'Premium Jasmine Rice - Grade A', pricePerKg: '1.8500', quantityKg: '50000', minOrderKg: '1000', grade: 'Grade A', location: 'Bangkok, Thailand', isActive: true, createdAt: new Date().toISOString(), variety: { id: '1', name: 'Jasmine Rice', origin: 'Thailand' }, seller: { id: '1', name: 'Golden Grain Co.', company: 'Golden Grain Co.' } },
-  { id: '2', title: 'Basmati Rice - Export Quality', pricePerKg: '2.2000', quantityKg: '30000', minOrderKg: '500', grade: 'Extra Long', location: 'Punjab, India', isActive: true, createdAt: new Date().toISOString(), variety: { id: '2', name: 'Basmati Rice', origin: 'India' }, seller: { id: '1', name: 'Golden Grain Co.', company: 'Golden Grain Co.' } },
-  { id: '3', title: 'Parboiled Rice Bulk Lot', pricePerKg: '0.9500', quantityKg: '100000', minOrderKg: '5000', grade: 'Standard', location: 'Ho Chi Minh City, Vietnam', isActive: true, createdAt: new Date().toISOString(), variety: { id: '3', name: 'Parboiled Rice', origin: 'Various' }, seller: { id: '2', name: 'Asia Rice Traders', company: 'Asia Rice Traders' } },
+interface ListingItem {
+  id: string;
+  title: string;
+  sellPrice: string;
+  boughtFor: string;
+  batchDate: string;
+  photo?: string;
+}
+
+const INITIAL_LISTINGS: ListingItem[] = [
+  { id: '1', title: 'Jasmine Rice 25kg', sellPrice: '1250.00', boughtFor: '1050.00', batchDate: '2026-07-01' },
+  { id: '2', title: 'Sinandomeng 50kg', sellPrice: '2100.00', boughtFor: '1800.00', batchDate: '2026-06-28' },
+  { id: '3', title: 'Bien Rice 25kg', sellPrice: '980.00', boughtFor: '820.00', batchDate: '2026-07-05' },
 ];
 
 export default function ListingsPage() {
-  const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
+  const [listings, setListings] = useState<ListingItem[]>(INITIAL_LISTINGS);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    const p = new URLSearchParams({ limit: '20' });
-    if (search) p.set('search', search);
-    api.get<PaginatedResponse<Listing>>(`/listings?${p}`)
-      .then(r => setListings(r.data.data))
-      .catch(() => {}) // fallback to mock
-      .finally(() => setLoading(false));
-  }, [search]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ListingItem | null>(null);
 
   const filtered = search
     ? listings.filter(l => l.title.toLowerCase().includes(search.toLowerCase()))
     : listings;
+
+  const handleDelete = (id: string) => {
+    if (!confirm('Delete this listing?')) return;
+    setListings(prev => prev.filter(l => l.id !== id));
+  };
+
+  const handleEdit = (item: ListingItem) => {
+    setEditingId(item.id);
+    setEditForm({ ...item });
+  };
+
+  const handleSave = () => {
+    if (!editForm) return;
+    setListings(prev => prev.map(l => l.id === editForm.id ? editForm : l));
+    setEditingId(null);
+    setEditForm(null);
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditForm(null);
+  };
+
+  const setField = (key: keyof ListingItem) => (e: any) => {
+    if (!editForm) return;
+    setEditForm({ ...editForm, [key]: e.target.value });
+  };
 
   return (
     <div>
@@ -37,27 +62,52 @@ export default function ListingsPage() {
 
       <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search listings…" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: 15, marginBottom: 12 }} />
 
-      {loading && listings === MOCK_LISTINGS ? <p className="text-muted text-center mt-2">Loading…</p> : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="empty"><div className="empty-icon">📭</div><p className="empty-text">No listings found</p></div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {filtered.map(l => (
-            <Link key={l.id} to={`/listings/${l.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
-                <span className="badge badge-green">{l.variety.name}</span>
-                {l.grade && <span className="text-xs text-muted">{l.grade}</span>}
-              </div>
-              <p style={{ fontWeight: 600, marginBottom: 6 }}>{l.title}</p>
-              <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>${parseFloat(l.pricePerKg).toFixed(3)}<span className="text-xs text-muted">/kg</span></p>
-              <div className="flex gap-2 mt-1">
-                <span className="text-xs text-muted">📦 {parseFloat(l.quantityKg).toLocaleString()} kg</span>
-                {l.location && <span className="text-xs text-muted">📍 {l.location}</span>}
-              </div>
-              <p className="text-xs text-muted mt-1">{l.seller.company ?? l.seller.name}</p>
-            </Link>
+            <div key={l.id} className="card">
+              {editingId === l.id && editForm ? (
+                /* Edit mode */
+                <div>
+                  <div className="field"><label>Title</label><input value={editForm.title} onChange={setField('title')} /></div>
+                  <div className="row-2">
+                    <div className="field"><label>Sell Price</label><input value={editForm.sellPrice} onChange={setField('sellPrice')} type="number" step="0.01" /></div>
+                    <div className="field"><label>Bought For</label><input value={editForm.boughtFor} onChange={setField('boughtFor')} type="number" step="0.01" /></div>
+                  </div>
+                  <div className="field"><label>Batch Date</label><input type="date" value={editForm.batchDate} onChange={setField('batchDate')} /></div>
+                  <div className="flex gap-1">
+                    <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
+                    <button className="btn btn-ghost btn-sm" onClick={handleCancel}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                /* View mode */
+                <div>
+                  <p style={{ fontWeight: 700, marginBottom: 6 }}>{l.title}</p>
+                  <div className="flex gap-2" style={{ marginBottom: 6 }}>
+                    <span className="text-xs text-muted">Sell: <strong style={{ color: 'var(--buy)' }}>₱{parseFloat(l.sellPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                    <span className="text-xs text-muted">Cost: <strong>₱{parseFloat(l.boughtFor).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted">Batch: {new Date(l.batchDate).toLocaleDateString()}</span>
+                    <span className={`badge ${parseFloat(l.sellPrice) > parseFloat(l.boughtFor) ? 'badge-green' : 'badge-red'}`}>
+                      Profit: ₱{(parseFloat(l.sellPrice) - parseFloat(l.boughtFor)).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 mt-1" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleEdit(l)}>Edit</button>
+                    <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDelete(l.id)}>Delete</button>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
+
+      <Link to="/listings/new" className="fab">+</Link>
     </div>
   );
 }
