@@ -18,10 +18,18 @@ interface ExpenseItem {
   date: string;
 }
 
+interface CapitalItem {
+  id: string;
+  description: string;
+  amount: string;
+  date: string;
+}
+
 export default function ListingsPage() {
-  const [tab, setTab] = useState<'listings' | 'expenses'>('listings');
+  const [tab, setTab] = useState<'listings' | 'expenses' | 'capital'>('listings');
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [capitals, setCapitals] = useState<CapitalItem[]>([]);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ListingItem | null>(null);
@@ -30,6 +38,12 @@ export default function ListingsPage() {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', date: '' });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+
+  // Capital form
+  const [showCapitalForm, setShowCapitalForm] = useState(false);
+  const [capitalForm, setCapitalForm] = useState({ description: '', amount: '', date: '' });
+  const [editingCapitalId, setEditingCapitalId] = useState<string | null>(null);
+  const [editCapitalForm, setEditCapitalForm] = useState<CapitalItem | null>(null);
   const [editExpenseForm, setEditExpenseForm] = useState<ExpenseItem | null>(null);
 
   // --- Listings logic ---
@@ -106,12 +120,14 @@ export default function ListingsPage() {
         <h1 style={{ fontSize: 22, fontWeight: 800 }}>Inventory</h1>
         {tab === 'listings' && <Link to="/listings/new" className="btn btn-primary btn-sm">+ New</Link>}
         {tab === 'expenses' && <button className="btn btn-primary btn-sm" onClick={() => setShowExpenseForm(true)}>+ Expense</button>}
+        {tab === 'capital' && <button className="btn btn-primary btn-sm" onClick={() => setShowCapitalForm(true)}>+ Capital</button>}
       </div>
 
       {/* Segment control */}
       <div className="segment-ctrl mb-2">
         <button className={`segment-btn${tab === 'listings' ? ' active' : ''}`} onClick={() => setTab('listings')}>Listings</button>
         <button className={`segment-btn${tab === 'expenses' ? ' active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
+        <button className={`segment-btn${tab === 'capital' ? ' active' : ''}`} onClick={() => setTab('capital')}>Capital</button>
       </div>
 
       {/* === LISTINGS TAB === */}
@@ -238,6 +254,87 @@ export default function ListingsPage() {
           )}
 
           {!showExpenseForm && <button className="fab" onClick={() => setShowExpenseForm(true)}>+</button>}
+        </>
+      )}
+
+      {/* === CAPITAL TAB === */}
+      {tab === 'capital' && (
+        <>
+          {/* Add capital form */}
+          {showCapitalForm && (
+            <div className="card mb-2">
+              <p className="text-sm font-bold mb-1">New Capital Entry</p>
+              <div className="field"><label>Description</label><input value={capitalForm.description} onChange={e => setCapitalForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Initial investment, Loan, Top-up" /></div>
+              <div className="row-2">
+                <div className="field"><label>Amount</label><input value={capitalForm.amount} onChange={e => setCapitalForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="0.00" /></div>
+                <div className="field"><label>Date</label><input type="date" value={capitalForm.date} onChange={e => setCapitalForm(f => ({ ...f, date: e.target.value }))} /></div>
+              </div>
+              <div className="flex gap-1">
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  if (!capitalForm.description || !capitalForm.amount || !capitalForm.date) return;
+                  setCapitals(prev => [{ id: Date.now().toString(), ...capitalForm }, ...prev]);
+                  setCapitalForm({ description: '', amount: '', date: '' });
+                  setShowCapitalForm(false);
+                }}>Add</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowCapitalForm(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Total capital */}
+          {capitals.length > 0 && (
+            <div className="card mb-2" style={{ background: '#dbeafe', textAlign: 'center' }}>
+              <p className="text-xs text-muted">Total Capital</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: '#1e40af' }}>
+                ₱{capitals.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          )}
+
+          {capitals.length === 0 ? (
+            <div className="empty"><div className="empty-icon">💰</div><p className="empty-text">No capital recorded</p><button className="btn btn-primary btn-sm mt-2" onClick={() => setShowCapitalForm(true)}>Add your first capital entry</button></div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {capitals.map(cap => (
+                <div key={cap.id} className="card">
+                  {editingCapitalId === cap.id && editCapitalForm ? (
+                    <div>
+                      <div className="field"><label>Description</label><input value={editCapitalForm.description} onChange={e => setEditCapitalForm(f => f ? { ...f, description: e.target.value } : f)} /></div>
+                      <div className="row-2">
+                        <div className="field"><label>Amount</label><input value={editCapitalForm.amount} onChange={e => setEditCapitalForm(f => f ? { ...f, amount: e.target.value } : f)} type="number" step="0.01" /></div>
+                        <div className="field"><label>Date</label><input type="date" value={editCapitalForm.date} onChange={e => setEditCapitalForm(f => f ? { ...f, date: e.target.value } : f)} /></div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button className="btn btn-primary btn-sm" onClick={() => {
+                          if (!editCapitalForm) return;
+                          setCapitals(prev => prev.map(c => c.id === editCapitalForm.id ? editCapitalForm : c));
+                          setEditingCapitalId(null);
+                          setEditCapitalForm(null);
+                        }}>Save</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditingCapitalId(null); setEditCapitalForm(null); }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <p style={{ fontWeight: 600 }}>{cap.description}</p>
+                        <p style={{ fontWeight: 800, color: '#1e40af' }}>₱{parseFloat(cap.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-muted">{new Date(cap.date).toLocaleDateString()}</span>
+                        <div className="flex gap-1">
+                          <button className="btn btn-outline btn-sm" onClick={() => { setEditingCapitalId(cap.id); setEditCapitalForm({ ...cap }); }}>Edit</button>
+                          <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => { if (confirm('Delete this capital entry?')) setCapitals(prev => prev.filter(c => c.id !== cap.id)); }}>Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showCapitalForm && <button className="fab" onClick={() => setShowCapitalForm(true)}>+</button>}
         </>
       )}
     </div>
