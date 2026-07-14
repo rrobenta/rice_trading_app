@@ -5,53 +5,29 @@
 ```
 rice_trading_app/
 ├── .kiro/steering/
-├── client/                        # Expo React Native mobile app
-│   ├── app/                       # Expo Router file-based routes
-│   │   ├── _layout.tsx            # Root: AuthProvider + auth guard + Stack
-│   │   ├── (auth)/
-│   │   │   ├── _layout.tsx
-│   │   │   ├── login.tsx
-│   │   │   └── register.tsx
-│   │   ├── (tabs)/
-│   │   │   ├── _layout.tsx        # Bottom tab bar config
-│   │   │   ├── index.tsx          # Dashboard
-│   │   │   ├── market.tsx         # Price charts
-│   │   │   ├── listings.tsx       # Browse listings
-│   │   │   ├── orders.tsx         # Orders + trades tabs
-│   │   │   └── profile.tsx        # Profile + stats
-│   │   ├── listing/
-│   │   │   ├── [id].tsx           # Listing detail
-│   │   │   └── new.tsx            # Create listing
-│   │   ├── order/
-│   │   │   └── new.tsx            # Place order
-│   │   └── trade/
-│   │       └── [id].tsx           # Trade detail
+├── client/                        # React PWA (Vite + vite-plugin-pwa)
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons/                 # PWA icons (192, 512 png)
 │   ├── src/
-│   │   ├── components/            # Card, Badge, Button, Input, LoadingScreen
-│   │   ├── constants/theme.ts     # Design tokens (colors, spacing, fonts, shadows)
+│   │   ├── components/AppShell.tsx  # Bottom nav + Outlet
 │   │   ├── context/AuthContext.tsx
-│   │   ├── lib/api.ts
+│   │   ├── lib/api.ts             # Axios + JWT interceptor
+│   │   ├── pages/                 # Route-level page components
+│   │   ├── styles/globals.css     # Mobile-first design system
 │   │   └── types/index.ts
-│   ├── assets/                    # icon.png, splash.png (replace placeholders)
-│   ├── app.json
+│   ├── index.html                 # PWA meta tags
+│   ├── vite.config.ts             # PWA plugin config + proxy
 │   └── package.json
 │
 ├── server/                        # Express + TypeScript REST API
 │   ├── prisma/schema.prisma
 │   └── src/
-│       ├── api/
-│       │   ├── auth/              # login, register, /me
-│       │   ├── listings/          # CRUD + filters
-│       │   ├── orders/            # Place + match + cancel
-│       │   ├── trades/            # History + status
-│       │   ├── market/            # Varieties + price history + summary
-│       │   └── users/             # Profile
-│       ├── db/prisma.ts
-│       ├── db/seed.ts
-│       ├── middleware/auth.ts
-│       ├── middleware/error-handler.ts
-│       ├── types/index.ts
-│       ├── utils/pagination.ts
+│       ├── api/                   # auth, listings, orders, trades, market, users
+│       ├── db/                    # Prisma client + seed
+│       ├── middleware/            # JWT auth, error handler
+│       ├── types/
+│       ├── utils/
 │       └── index.ts
 │   └── package.json
 │
@@ -62,8 +38,9 @@ rice_trading_app/
 
 ## Conventions
 
-- **Expo Router** — route = file. Group folders `(auth)` and `(tabs)` don't add path segments
-- **Screens** live in `app/` — shared logic/components live in `src/`
-- **Design tokens** in `src/constants/theme.ts` — never hardcode colors or sizes inline
-- **Thin screens** — data fetching in the screen component, UI logic in components
+- **Mobile-first CSS** — designed to feel like a native app on phones
+- **Bottom nav** for primary navigation (5 tabs)
+- **Pages** in `src/pages/` — one file per route
+- **No component libraries** — lightweight utility CSS in globals.css
+- **PWA** — installable via browser, offline-capable with Workbox
 - **Naming**: files `kebab-case`, components `PascalCase`, functions `camelCase`

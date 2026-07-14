@@ -1,12 +1,12 @@
 # Tech Stack
 
-## Mobile Client (client/)
+## Frontend (client/) — Progressive Web App
 
-- **Framework**: React Native via Expo SDK 51
-- **Navigation**: Expo Router v3 (file-based, like Next.js)
-- **Charts**: react-native-gifted-charts + react-native-svg
-- **Storage**: AsyncStorage (JWT token)
-- **HTTP**: Axios with JWT interceptor
+- **Framework**: React 18 + TypeScript (Vite)
+- **Routing**: React Router v6
+- **Charts**: Recharts
+- **PWA**: vite-plugin-pwa (Workbox service worker, web manifest, offline caching)
+- **HTTP**: Axios with JWT interceptor (localStorage)
 
 ## Backend (server/)
 
@@ -18,21 +18,26 @@
 ## Common Commands
 
 ```bash
-# Server
-npm run server             # Start Express API on :3001
-npm run db:migrate         # Run Prisma migrations
-npm run db:seed            # Seed demo data
-npm run db:studio          # Open Prisma Studio
+# Run both client + server
+npm run dev
 
-# Mobile
-npm run mobile             # Start Expo dev server (scan QR with Expo Go)
-npm run android            # Open on Android emulator
-npm run ios                # Open on iOS simulator (Mac only)
+# Individual
+npm run client      # Vite dev server on :5173
+npm run server      # Express API on :3001
+
+# Database
+npm run db:migrate  # Run Prisma migrations
+npm run db:seed     # Seed demo data
+npm run db:studio   # Open Prisma Studio
+
+# Build PWA for production
+npm run build       # outputs to client/dist/
 ```
 
 ## Notes
 
-- Set `EXPO_PUBLIC_API_URL` in `client/.env` to your machine's local IP (not localhost) when testing on a real device
-- All monetary values use `decimal.js` on server, string formatting on client — never `Number` for price math
-- Expo Router uses file-based routing: `app/(tabs)/index.tsx` → `/` tab, `app/listing/[id].tsx` → `/listing/:id`
-- Environment variables prefixed `EXPO_PUBLIC_` are available client-side in Expo
+- Vite dev server proxies `/api` to localhost:3001 — no CORS issues locally
+- PWA caches static assets + API responses for offline/low-connectivity use
+- All monetary values use `decimal.js` on server, string formatting on client
+- Set `VITE_API_URL` in `client/.env` for production builds pointing at your deployed API
+- The app is installable on phones via "Add to Home Screen" in the browser

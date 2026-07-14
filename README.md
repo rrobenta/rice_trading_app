@@ -1,105 +1,108 @@
-# 🌾 Rice Trading Platform
+# 🌾 RiceMarket — Progressive Web App
 
-A full-stack **mobile app** for buying and selling rice commodities. Traders, buyers, and suppliers can manage listings, place orders, track trades, and monitor live market pricing — from their phone.
-
----
-
-## Stack
-
-| Layer | Tech |
-|---|---|
-| Mobile | React Native + Expo (SDK 51), Expo Router v3 |
-| Charts | react-native-gifted-charts |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL + Prisma ORM |
-| Auth | JWT + bcryptjs, stored in AsyncStorage |
-| Decimals | decimal.js (no float math for prices) |
+A full-stack **PWA** for buying and selling rice commodities. Installs on any phone like a native app — no app store needed. Works offline, sends push notifications, and feels native with a bottom tab bar and mobile-first UI.
 
 ---
 
 ## Features
 
-- **Dashboard** — market snapshot cards, recent orders & trades, quick-action buttons
-- **Market** — per-variety price charts (7/14/30/90 day), live % change
-- **Listings** — infinite-scroll browse with search + variety filter, create listing form
-- **Orders** — BUY/SELL orders with fill progress bar, cancel action, trade history tab
-- **Profile** — stats, editable account info, sign out
-- **Auth** — login + register with role selection (Trader / Buyer / Supplier)
-- **Matching engine** — orders auto-fill at price-time priority when placed
+- **Installable** — "Add to Home Screen" on any phone/tablet/desktop
+- **Offline-capable** — Workbox service worker caches app shell + API data
+- **Dashboard** — market snapshot, recent activity, quick actions
+- **Market** — per-variety price charts with time range selector
+- **Listings** — browse, search, filter, create rice sale listings
+- **Orders** — BUY/SELL with auto-matching engine, fill progress
+- **Trades** — history, complete/dispute workflow
+- **Profile** — stats, editable account info
 
 ---
 
-## Prerequisites
+## Tech Stack
 
-- [Node.js](https://nodejs.org/) v18+
-- [Expo CLI](https://docs.expo.dev/get-started/installation/): `npm install -g expo-cli`
-- [PostgreSQL](https://www.postgresql.org/) v14+
-- iOS: Xcode (Mac only) or [Expo Go](https://expo.dev/client) app
-- Android: Android Studio emulator or [Expo Go](https://expo.dev/client) app
+| Layer | Tech |
+|---|---|
+| Frontend | React 18 + TypeScript, Vite, React Router v6, Recharts |
+| PWA | vite-plugin-pwa, Workbox (precache + runtime cache) |
+| Backend | Node.js + Express + TypeScript |
+| Database | PostgreSQL + Prisma ORM |
+| Auth | JWT + bcryptjs (stored in localStorage) |
 
 ---
 
-## Setup
+## Local Development
 
-### 1. Install dependencies
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 14+
+
+### Setup
 
 ```bash
+# 1. Clone
+git clone https://github.com/YOUR_USERNAME/rice-trading-app.git
+cd rice-trading-app
+
+# 2. Install
 npm install
-cd client && npx expo install   # ensures correct peer deps
-```
 
-### 2. Configure the server
+# 3. Configure DB
+# Edit server/.env → set DATABASE_URL and JWT_SECRET
 
-```bash
-# Edit server/.env
-DATABASE_URL="postgresql://user:password@localhost:5432/rice_trading_db"
-JWT_SECRET="your-random-secret"
-PORT=3001
-```
-
-### 3. Run migrations + seed
-
-```bash
+# 4. Migrate + seed
 npm run db:migrate
 npm run db:seed
+
+# 5. Start both servers
+npm run dev
+# → PWA: http://localhost:5173
+# → API: http://localhost:3001
 ```
 
-### 4. Configure the mobile API URL
-
-```bash
-# Edit client/.env
-# Use your machine's local IP (not localhost) so the device can reach it
-EXPO_PUBLIC_API_URL=http://192.168.1.X:3001/api
-```
-
-> Find your IP: `ipconfig` on Windows → look for IPv4 Address
-
-### 5. Start the server
-
-```bash
-npm run server
-```
-
-### 6. Start the mobile app
-
-```bash
-npm run mobile
-# or for a specific platform:
-npm run android
-npm run ios
-```
-
-Scan the QR code with **Expo Go** on your phone, or press `a` for Android emulator / `i` for iOS simulator.
+### Demo accounts (password: `password123`)
+- supplier@example.com (SUPPLIER)
+- buyer@example.com (BUYER)
+- trader@example.com (TRADER)
 
 ---
 
-## Demo Accounts (after seeding)
+## Deploy to Production (Free)
 
-| Email | Role | Password |
-|---|---|---|
-| supplier@example.com | SUPPLIER | password123 |
-| buyer@example.com | BUYER | password123 |
-| trader@example.com | TRADER | password123 |
+### Option A: Vercel (frontend) + Railway (backend)
+
+**1. Deploy backend to Railway:**
+- Go to [railway.app](https://railway.app) → Deploy from GitHub
+- Root directory: `server`
+- Add PostgreSQL plugin
+- Add env vars: `JWT_SECRET`, `JWT_EXPIRES_IN=7d`
+- Build: `npm install && npm run build`
+- Start: `npm start`
+- Run `npx prisma migrate deploy && npm run db:seed` in Railway shell
+
+**2. Deploy frontend to Vercel:**
+- Go to [vercel.com](https://vercel.com) → Import GitHub repo
+- Root directory: `client`
+- Build command: `npm run build`
+- Output: `dist`
+- Env var: `VITE_API_URL=https://your-railway-url.up.railway.app/api`
+
+### Option B: Railway for everything
+- Deploy the whole repo, with two services (one for `server/`, one for `client/` as static site)
+
+### Option C: GitHub Pages (frontend only, needs external API)
+```bash
+cd client
+npm run build
+# Upload dist/ to GitHub Pages
+```
+
+---
+
+## How to Install the PWA on Your Phone
+
+1. Open the deployed URL in your phone's browser (Chrome/Safari)
+2. You'll see an "Install" or "Add to Home Screen" prompt
+3. Tap it — the app appears on your home screen with its own icon
+4. It now runs fullscreen like a native app, works offline
 
 ---
 
@@ -107,55 +110,20 @@ Scan the QR code with **Expo Go** on your phone, or press `a` for Android emulat
 
 ```
 rice_trading_app/
-├── client/                        # Expo React Native app
-│   ├── app/                       # Expo Router file-based routes
-│   │   ├── _layout.tsx            # Root layout + auth guard
-│   │   ├── (auth)/                # Login, Register screens
-│   │   ├── (tabs)/                # Tab bar: Dashboard, Market, Listings, Orders, Profile
-│   │   ├── listing/[id].tsx       # Listing detail
-│   │   ├── listing/new.tsx        # Create listing form
-│   │   ├── order/new.tsx          # Place order form
-│   │   └── trade/[id].tsx         # Trade detail
+├── client/          # React PWA (Vite + vite-plugin-pwa)
+│   ├── public/      # favicon, PWA icons
 │   ├── src/
-│   │   ├── components/            # Card, Badge, Button, Input, LoadingScreen
-│   │   ├── constants/theme.ts     # Colors, spacing, typography, shadows
-│   │   ├── context/AuthContext.tsx
-│   │   ├── lib/api.ts             # Axios instance with JWT interceptors
-│   │   └── types/index.ts
-│   ├── assets/                    # App icons + splash (replace with real assets)
-│   └── app.json                   # Expo config
+│   │   ├── components/  # AppShell (bottom nav)
+│   │   ├── context/     # AuthContext
+│   │   ├── lib/         # Axios client
+│   │   ├── pages/       # All screens
+│   │   ├── styles/      # Mobile-first CSS
+│   │   └── types/       # TypeScript types
+│   └── vite.config.ts   # PWA manifest + caching config
 │
-├── server/                        # Express + TypeScript API
-│   ├── prisma/schema.prisma
-│   └── src/
-│       ├── api/                   # auth, listings, orders, trades, market, users
-│       ├── db/                    # Prisma client + seed
-│       ├── middleware/            # JWT auth, error handler
-│       └── index.ts
+├── server/          # Express + TypeScript API
+│   ├── prisma/      # Schema + migrations
+│   └── src/api/     # auth, listings, orders, trades, market, users
 │
-└── package.json                   # npm workspaces root
+└── package.json     # npm workspaces root
 ```
-
----
-
-## Building for Production
-
-```bash
-# Install EAS CLI
-npm install -g eas-cli
-eas login
-
-# Configure your project
-cd client
-eas build:configure
-
-# Build
-eas build --platform android
-eas build --platform ios
-```
-
----
-
-## API Summary
-
-The mobile app consumes the same REST API as the web version — all endpoints documented in the server README. Set `EXPO_PUBLIC_API_URL` to your deployed server URL for production builds.

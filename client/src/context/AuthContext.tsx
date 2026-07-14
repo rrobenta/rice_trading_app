@@ -1,79 +1,50 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../lib/api';
 import { User } from '../types';
 
-interface AuthContextValue {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
+interface AuthCtx {
+  user: User | null; loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: () => Promise<void>;
+  register: (d: { email: string; password: string; name: string; role?: string; company?: string }) => Promise<void>;
+  logout: () => void;
 }
 
-interface RegisterData {
-  email: string;
-  password: string;
-  name: string;
-  role?: string;
-  company?: string;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem('token').then(async (t) => {
-      if (t) {
-        setToken(t);
-        try {
-          const res = await api.get('/auth/me');
-          setUser(res.data);
-        } catch {
-          await AsyncStorage.removeItem('token');
-          setToken(null);
-        }
-      }
+    if (localStorage.getItem('token')) {
+      api.get('/auth/me')
+        .then(r => setUser(r.data))
+        .catch(() => localStorage.removeItem('token'))
+        .finally(() => setLoading(false));
+    } else {
       setLoading(false);
-    });
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
-    const { user: u, token: t } = res.data;
-    await AsyncStorage.setItem('token', t);
-    setToken(t);
-    setUser(u);
+    const { data } = await api.post('/auth/login', { email, password });
+    localStorage.setItem('token', data.token);
+    setUser(data.user);
   };
 
-  const register = async (data: RegisterData) => {
-    const res = await api.post('/auth/register', data);
-    const { user: u, token: t } = res.data;
-    await AsyncStorage.setItem('token', t);
-    setToken(t);
-    setUser(u);
+  const register = async (d: any) => {
+    const { data } = await api.post('/auth/register', d);
+    localStorage.setItem('token', data.token);
+    setUser(data.user);
   };
 
-  const logout = async () => {
-    await AsyncStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-  };
+  const logout = () => { localStorage.removeItem('token'); setUser(null); };
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <Ctx.Provider value={{ user, loading, login, register, logout }}>{children}</Ctx.Provider>;
 }
 
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+export function useAuth() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useAuth outside AuthProvider');
   return ctx;
 }

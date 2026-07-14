@@ -1,0 +1,2 @@
+Replace this file with a real 192x192 PNG icon.
+You can generate PWA icons at https://maskable.app/editor or https://realfavicongenerator.net

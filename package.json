@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "mobile": "npm start --workspace=client",
-    "android": "npm run android --workspace=client",
-    "ios": "npm run ios --workspace=client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "npm run dev --workspace=client",
     "server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client",
     "build:server": "npm run build --workspace=server",
     "db:migrate": "npm run db:migrate --workspace=server",
     "db:seed": "npm run db:seed --workspace=server",
@@ -15,5 +15,8 @@
   "workspaces": [
     "client",
     "server"
-  ]
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }
