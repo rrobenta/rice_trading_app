@@ -6,6 +6,7 @@ interface ListingItem {
   title: string;
   sellPrice: string;
   boughtFor: string;
+  quantity: string;
   batchDate: string;
   photo?: string;
 }
@@ -131,7 +132,10 @@ export default function ListingsPage() {
                         <div className="field"><label>Sell Price</label><input value={editForm.sellPrice} onChange={setField('sellPrice')} type="number" step="0.01" /></div>
                         <div className="field"><label>Bought For</label><input value={editForm.boughtFor} onChange={setField('boughtFor')} type="number" step="0.01" /></div>
                       </div>
-                      <div className="field"><label>Batch Date</label><input type="date" value={editForm.batchDate} onChange={setField('batchDate')} /></div>
+                      <div className="row-2">
+                        <div className="field"><label>Quantity</label><input value={editForm.quantity} onChange={setField('quantity')} type="number" min="1" /></div>
+                        <div className="field"><label>Batch Date</label><input type="date" value={editForm.batchDate} onChange={setField('batchDate')} /></div>
+                      </div>
                       <div className="flex gap-1">
                         <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
                         <button className="btn btn-ghost btn-sm" onClick={handleCancel}>Cancel</button>
@@ -143,6 +147,7 @@ export default function ListingsPage() {
                       <div className="flex gap-2" style={{ marginBottom: 6 }}>
                         <span className="text-xs text-muted">Sell: <strong style={{ color: 'var(--buy)' }}>₱{parseFloat(l.sellPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
                         <span className="text-xs text-muted">Cost: <strong>₱{parseFloat(l.boughtFor).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                        <span className="text-xs text-muted">Qty: <strong>{l.quantity}</strong></span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-muted">Batch: {new Date(l.batchDate).toLocaleDateString()}</span>

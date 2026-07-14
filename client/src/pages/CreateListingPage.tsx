@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CreateListingPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: '', photo: '', sellPrice: '', boughtFor: '', batchDate: '' });
+  const [form, setForm] = useState({ title: '', photo: '', sellPrice: '', boughtFor: '', quantity: '', batchDate: '' });
   const [preview, setPreview] = useState<string | null>(null);
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }));
@@ -47,6 +47,11 @@ export default function CreateListingPage() {
             <label>Bought For *</label>
             <input value={form.boughtFor} onChange={set('boughtFor')} type="number" step="0.01" min="0" required placeholder="0.00" />
           </div>
+        </div>
+
+        <div className="field">
+          <label>Quantity *</label>
+          <input value={form.quantity} onChange={set('quantity')} type="number" min="1" required placeholder="e.g. 50" />
         </div>
 
         <div className="field">
