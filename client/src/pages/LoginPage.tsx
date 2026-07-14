@@ -14,9 +14,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email.toLowerCase().trim(), password);
+      await login(email.trim(), password);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      const code = err.code;
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Invalid email or password');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many attempts. Try again later.');
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -27,7 +34,7 @@ export default function LoginPage() {
       <div className="auth-card card">
         <div className="auth-logo">🌾</div>
         <h1 className="auth-title">RiceMarket</h1>
-        <p className="auth-sub">Sign in to your trading account</p>
+        <p className="auth-sub">Sign in to your account</p>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Email</label>
@@ -37,7 +44,7 @@ export default function LoginPage() {
             <label>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
           </div>
-          {error && <p className="field err" style={{ color: 'var(--danger)', fontSize: 13, textAlign: 'center' }}>{error}</p>}
+          {error && <p style={{ color: 'var(--danger)', fontSize: 13, textAlign: 'center', marginBottom: 12 }}>{error}</p>}
           <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
@@ -45,11 +52,6 @@ export default function LoginPage() {
         <p className="text-sm text-muted text-center mt-2">
           No account? <Link to="/register" style={{ fontWeight: 600 }}>Create one</Link>
         </p>
-        <div style={{ marginTop: 16, background: '#e8f5e9', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
-          <p className="text-xs font-bold" style={{ color: 'var(--primary-dark)' }}>Demo Accounts</p>
-          <p className="text-xs text-muted">supplier@example.com · buyer@example.com</p>
-          <p className="text-xs text-muted">Password: password123</p>
-        </div>
       </div>
     </div>
   );

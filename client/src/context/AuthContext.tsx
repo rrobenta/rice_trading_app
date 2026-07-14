@@ -1,46 +1,54 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '../lib/api';
-import { User } from '../types';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 interface AuthCtx {
-  user: User | null; loading: boolean;
+  user: FirebaseUser | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (d: { email: string; password: string; name: string; role?: string; company?: string }) => Promise<void>;
-  logout: () => void;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (localStorage.getItem('token')) {
-      api.get('/auth/me')
-        .then(r => setUser(r.data))
-        .catch(() => localStorage.removeItem('token'))
-        .finally(() => setLoading(false));
-    } else {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
-    }
+    });
+    return unsub;
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (d: any) => {
-    const { data } = await api.post('/auth/register', d);
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
+  const register = async (email: string, password: string, name: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
   };
 
-  const logout = () => { localStorage.removeItem('token'); setUser(null); };
+  const logout = async () => {
+    await signOut(auth);
+  };
 
-  return <Ctx.Provider value={{ user, loading, login, register, logout }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useAuth() {

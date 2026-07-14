@@ -1,19 +1,142 @@
-# 🌾 RiceMarket — Progressive Web App
+# 🌾 RiceMarket — Rice Trading Inventory System
 
-A full-stack **PWA** for buying and selling rice commodities. Installs on any phone like a native app — no app store needed. Works offline, sends push notifications, and feels native with a bottom tab bar and mobile-first UI.
+A Progressive Web App for managing rice trading inventory, expenses, and capital. Built with React + Firebase — free to host, works on any device, installable like a native app.
 
 ---
 
 ## Features
 
-- **Installable** — "Add to Home Screen" on any phone/tablet/desktop
-- **Offline-capable** — Workbox service worker caches app shell + API data
-- **Dashboard** — market snapshot, recent activity, quick actions
-- **Market** — per-variety price charts with time range selector
-- **Listings** — browse, search, filter, create rice sale listings
-- **Orders** — BUY/SELL with auto-matching engine, fill progress
-- **Trades** — history, complete/dispute workflow
-- **Profile** — stats, editable account info
+- **Login / Register** — Firebase Authentication (email + password)
+- **Dashboard** — Available stocks, gross/net income, expenses, fast-moving items (live from Firestore)
+- **Listings** — Add, edit, delete stock items (title, sell price, cost, quantity, batch date)
+- **Expenses** — Track delivery, trucking, and misc costs
+- **Capital** — Record investments and loans
+- **PWA** — Installable on phone, works offline for cached pages
+- **Real-time** — All data syncs live across devices
+
+---
+
+## Deploy (Step by Step)
+
+### 1. Create a Firebase project
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com)
+2. Click **Add project** → name it (e.g. `rice-trading-app`) → Continue
+3. Disable Google Analytics (optional) → Create Project
+
+### 2. Enable Authentication
+
+1. In your Firebase project, go to **Authentication** → **Get Started**
+2. Click **Email/Password** → Enable → Save
+
+### 3. Enable Firestore
+
+1. Go to **Firestore Database** → **Create database**
+2. Choose **Start in test mode** (we'll add proper rules later)
+3. Pick a region close to you → Done
+
+### 4. Get your Firebase config
+
+1. Go to **Project Settings** (gear icon) → **General** → scroll to **Your apps**
+2. Click the **Web** icon (</>) → Register app (any nickname)
+3. Copy the config object — you'll need `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`
+
+### 5. Set your config locally
+
+Edit `client/.env`:
+
+```
+VITE_FIREBASE_API_KEY=AIzaSy...your-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abcdef
+```
+
+Also update `client/.firebaserc`:
+```json
+{
+  "projects": {
+    "default": "your-project-id"
+  }
+}
+```
+
+### 6. Install Firebase CLI + deploy
+
+```bash
+# Install Firebase CLI (one time)
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Go to client folder
+cd client
+
+# Install dependencies
+npm install
+
+# Build and deploy
+npm run deploy
+```
+
+Your app is now live at: `https://your-project-id.web.app`
+
+### 7. Deploy Firestore rules + indexes
+
+```bash
+cd client
+firebase deploy --only firestore
+```
+
+---
+
+## Local Development
+
+```bash
+cd client
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+---
+
+## Project Structure
+
+```
+client/
+├── src/
+│   ├── components/AppShell.tsx    # Bottom nav + layout
+│   ├── context/AuthContext.tsx    # Firebase auth state
+│   ├── lib/firebase.ts           # Firebase init (Auth + Firestore)
+│   ├── pages/
+│   │   ├── LoginPage.tsx
+│   │   ├── RegisterPage.tsx
+│   │   ├── DashboardPage.tsx     # Live stats from Firestore
+│   │   ├── ListingsPage.tsx      # Listings + Expenses + Capital tabs
+│   │   ├── CreateListingPage.tsx
+│   │   ├── OrdersPage.tsx
+│   │   └── ProfilePage.tsx
+│   ├── styles/globals.css        # Mobile-first CSS
+│   └── types/index.ts
+├── firebase.json                 # Hosting + Firestore config
+├── firestore.rules               # Security rules
+├── firestore.indexes.json        # Composite indexes
+└── package.json
+```
+
+---
+
+## Firestore Collections
+
+| Collection | Fields | Scoped by |
+|---|---|---|
+| `listings` | title, sellPrice, boughtFor, quantity, batchDate, uid, createdAt | user uid |
+| `expenses` | description, amount, date, uid, createdAt | user uid |
+| `capitals` | description, amount, date, uid, createdAt | user uid |
 
 ---
 
@@ -21,109 +144,8 @@ A full-stack **PWA** for buying and selling rice commodities. Installs on any ph
 
 | Layer | Tech |
 |---|---|
-| Frontend | React 18 + TypeScript, Vite, React Router v6, Recharts |
-| PWA | vite-plugin-pwa, Workbox (precache + runtime cache) |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL + Prisma ORM |
-| Auth | JWT + bcryptjs (stored in localStorage) |
-
----
-
-## Local Development
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-
-### Setup
-
-```bash
-# 1. Clone
-git clone https://github.com/YOUR_USERNAME/rice-trading-app.git
-cd rice-trading-app
-
-# 2. Install
-npm install
-
-# 3. Configure DB
-# Edit server/.env → set DATABASE_URL and JWT_SECRET
-
-# 4. Migrate + seed
-npm run db:migrate
-npm run db:seed
-
-# 5. Start both servers
-npm run dev
-# → PWA: http://localhost:5173
-# → API: http://localhost:3001
-```
-
-### Demo accounts (password: `password123`)
-- supplier@example.com (SUPPLIER)
-- buyer@example.com (BUYER)
-- trader@example.com (TRADER)
-
----
-
-## Deploy to Production (Free)
-
-### Option A: Vercel (frontend) + Railway (backend)
-
-**1. Deploy backend to Railway:**
-- Go to [railway.app](https://railway.app) → Deploy from GitHub
-- Root directory: `server`
-- Add PostgreSQL plugin
-- Add env vars: `JWT_SECRET`, `JWT_EXPIRES_IN=7d`
-- Build: `npm install && npm run build`
-- Start: `npm start`
-- Run `npx prisma migrate deploy && npm run db:seed` in Railway shell
-
-**2. Deploy frontend to Vercel:**
-- Go to [vercel.com](https://vercel.com) → Import GitHub repo
-- Root directory: `client`
-- Build command: `npm run build`
-- Output: `dist`
-- Env var: `VITE_API_URL=https://your-railway-url.up.railway.app/api`
-
-### Option B: Railway for everything
-- Deploy the whole repo, with two services (one for `server/`, one for `client/` as static site)
-
-### Option C: GitHub Pages (frontend only, needs external API)
-```bash
-cd client
-npm run build
-# Upload dist/ to GitHub Pages
-```
-
----
-
-## How to Install the PWA on Your Phone
-
-1. Open the deployed URL in your phone's browser (Chrome/Safari)
-2. You'll see an "Install" or "Add to Home Screen" prompt
-3. Tap it — the app appears on your home screen with its own icon
-4. It now runs fullscreen like a native app, works offline
-
----
-
-## Project Structure
-
-```
-rice_trading_app/
-├── client/          # React PWA (Vite + vite-plugin-pwa)
-│   ├── public/      # favicon, PWA icons
-│   ├── src/
-│   │   ├── components/  # AppShell (bottom nav)
-│   │   ├── context/     # AuthContext
-│   │   ├── lib/         # Axios client
-│   │   ├── pages/       # All screens
-│   │   ├── styles/      # Mobile-first CSS
-│   │   └── types/       # TypeScript types
-│   └── vite.config.ts   # PWA manifest + caching config
-│
-├── server/          # Express + TypeScript API
-│   ├── prisma/      # Schema + migrations
-│   └── src/api/     # auth, listings, orders, trades, market, users
-│
-└── package.json     # npm workspaces root
-```
+| Frontend | React 18 + TypeScript + Vite |
+| Auth | Firebase Authentication |
+| Database | Cloud Firestore (real-time) |
+| Hosting | Firebase Hosting (free) |
+| PWA | vite-plugin-pwa + Workbox |

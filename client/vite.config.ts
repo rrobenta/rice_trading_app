@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  base: '/rice_trading_app/',
+  base: '/',
   plugins: [
     react(),
     VitePWA({
@@ -21,8 +21,8 @@ export default defineConfig({
         background_color: '#f4f6f5',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/rice_trading_app/',
-        start_url: '/rice_trading_app/',
+        scope: '/',
+        start_url: '/',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

@@ -1,5 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 
 interface ListingItem {
   id: string;
@@ -8,7 +13,6 @@ interface ListingItem {
   boughtFor: string;
   quantity: string;
   batchDate: string;
-  photo?: string;
 }
 
 interface ExpenseItem {
@@ -26,49 +30,67 @@ interface CapitalItem {
 }
 
 export default function ListingsPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<'listings' | 'expenses' | 'capital'>('listings');
+
+  // Listings
   const [listings, setListings] = useState<ListingItem[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [capitals, setCapitals] = useState<CapitalItem[]>([]);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ListingItem | null>(null);
 
-  // Expense form
+  // Expenses
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', date: '' });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editExpenseForm, setEditExpenseForm] = useState<ExpenseItem | null>(null);
 
-  // Capital form
+  // Capital
+  const [capitals, setCapitals] = useState<CapitalItem[]>([]);
   const [showCapitalForm, setShowCapitalForm] = useState(false);
   const [capitalForm, setCapitalForm] = useState({ description: '', amount: '', date: '' });
   const [editingCapitalId, setEditingCapitalId] = useState<string | null>(null);
   const [editCapitalForm, setEditCapitalForm] = useState<CapitalItem | null>(null);
-  const [editExpenseForm, setEditExpenseForm] = useState<ExpenseItem | null>(null);
 
-  // --- Listings logic ---
-  const filtered = search
-    ? listings.filter(l => l.title.toLowerCase().includes(search.toLowerCase()))
-    : listings;
+  // === Firestore listeners ===
+  useEffect(() => {
+    if (!user) return;
+    const uid = user.uid;
 
-  const handleDelete = (id: string) => {
+    const unsubListings = onSnapshot(
+      query(collection(db, 'listings'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      (snap) => setListings(snap.docs.map(d => ({ id: d.id, ...d.data() } as ListingItem)))
+    );
+
+    const unsubExpenses = onSnapshot(
+      query(collection(db, 'expenses'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      (snap) => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as ExpenseItem)))
+    );
+
+    const unsubCapitals = onSnapshot(
+      query(collection(db, 'capitals'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      (snap) => setCapitals(snap.docs.map(d => ({ id: d.id, ...d.data() } as CapitalItem)))
+    );
+
+    return () => { unsubListings(); unsubExpenses(); unsubCapitals(); };
+  }, [user]);
+
+  // === Listings CRUD ===
+  const handleDeleteListing = async (id: string) => {
     if (!confirm('Delete this listing?')) return;
-    setListings(prev => prev.filter(l => l.id !== id));
+    await deleteDoc(doc(db, 'listings', id));
   };
 
-  const handleEdit = (item: ListingItem) => {
+  const handleEditListing = (item: ListingItem) => {
     setEditingId(item.id);
     setEditForm({ ...item });
   };
 
-  const handleSave = () => {
+  const handleSaveListing = async () => {
     if (!editForm) return;
-    setListings(prev => prev.map(l => l.id === editForm.id ? editForm : l));
-    setEditingId(null);
-    setEditForm(null);
-  };
-
-  const handleCancel = () => {
+    const { id, ...data } = editForm;
+    await updateDoc(doc(db, 'listings', id), data);
     setEditingId(null);
     setEditForm(null);
   };
@@ -78,40 +100,50 @@ export default function ListingsPage() {
     setEditForm({ ...editForm, [key]: e.target.value });
   };
 
-  // --- Expenses logic ---
-  const handleAddExpense = () => {
-    if (!expenseForm.description || !expenseForm.amount || !expenseForm.date) return;
-    const newExpense: ExpenseItem = {
-      id: Date.now().toString(),
-      description: expenseForm.description,
-      amount: expenseForm.amount,
-      date: expenseForm.date,
-    };
-    setExpenses(prev => [newExpense, ...prev]);
+  const filtered = search
+    ? listings.filter(l => l.title.toLowerCase().includes(search.toLowerCase()))
+    : listings;
+
+  // === Expenses CRUD ===
+  const handleAddExpense = async () => {
+    if (!expenseForm.description || !expenseForm.amount || !expenseForm.date || !user) return;
+    await addDoc(collection(db, 'expenses'), { ...expenseForm, uid: user.uid, createdAt: new Date() });
     setExpenseForm({ description: '', amount: '', date: '' });
     setShowExpenseForm(false);
   };
 
-  const handleDeleteExpense = (id: string) => {
+  const handleDeleteExpense = async (id: string) => {
     if (!confirm('Delete this expense?')) return;
-    setExpenses(prev => prev.filter(e => e.id !== id));
+    await deleteDoc(doc(db, 'expenses', id));
   };
 
-  const handleEditExpense = (item: ExpenseItem) => {
-    setEditingExpenseId(item.id);
-    setEditExpenseForm({ ...item });
-  };
-
-  const handleSaveExpense = () => {
+  const handleSaveExpense = async () => {
     if (!editExpenseForm) return;
-    setExpenses(prev => prev.map(e => e.id === editExpenseForm.id ? editExpenseForm : e));
+    const { id, ...data } = editExpenseForm;
+    await updateDoc(doc(db, 'expenses', id), data);
     setEditingExpenseId(null);
     setEditExpenseForm(null);
   };
 
-  const handleCancelExpense = () => {
-    setEditingExpenseId(null);
-    setEditExpenseForm(null);
+  // === Capital CRUD ===
+  const handleAddCapital = async () => {
+    if (!capitalForm.description || !capitalForm.amount || !capitalForm.date || !user) return;
+    await addDoc(collection(db, 'capitals'), { ...capitalForm, uid: user.uid, createdAt: new Date() });
+    setCapitalForm({ description: '', amount: '', date: '' });
+    setShowCapitalForm(false);
+  };
+
+  const handleDeleteCapital = async (id: string) => {
+    if (!confirm('Delete this capital entry?')) return;
+    await deleteDoc(doc(db, 'capitals', id));
+  };
+
+  const handleSaveCapital = async () => {
+    if (!editCapitalForm) return;
+    const { id, ...data } = editCapitalForm;
+    await updateDoc(doc(db, 'capitals', id), data);
+    setEditingCapitalId(null);
+    setEditCapitalForm(null);
   };
 
   return (
@@ -153,8 +185,8 @@ export default function ListingsPage() {
                         <div className="field"><label>Batch Date</label><input type="date" value={editForm.batchDate} onChange={setField('batchDate')} /></div>
                       </div>
                       <div className="flex gap-1">
-                        <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
-                        <button className="btn btn-ghost btn-sm" onClick={handleCancel}>Cancel</button>
+                        <button className="btn btn-primary btn-sm" onClick={handleSaveListing}>Save</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</button>
                       </div>
                     </div>
                   ) : (
@@ -166,14 +198,14 @@ export default function ListingsPage() {
                         <span className="text-xs text-muted">Qty: <strong>{l.quantity}</strong></span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted">Batch: {new Date(l.batchDate).toLocaleDateString()}</span>
+                        <span className="text-xs text-muted">Batch: {l.batchDate}</span>
                         <span className={`badge ${parseFloat(l.sellPrice) > parseFloat(l.boughtFor) ? 'badge-green' : 'badge-red'}`}>
                           Profit: ₱{(parseFloat(l.sellPrice) - parseFloat(l.boughtFor)).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex gap-1 mt-1" style={{ justifyContent: 'flex-end' }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => handleEdit(l)}>Edit</button>
-                        <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDelete(l.id)}>Delete</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => handleEditListing(l)}>Edit</button>
+                        <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDeleteListing(l.id)}>Delete</button>
                       </div>
                     </div>
                   )}
@@ -189,11 +221,10 @@ export default function ListingsPage() {
       {/* === EXPENSES TAB === */}
       {tab === 'expenses' && (
         <>
-          {/* Add expense form */}
           {showExpenseForm && (
             <div className="card mb-2">
               <p className="text-sm font-bold mb-1">New Expense</p>
-              <div className="field"><label>Description</label><input value={expenseForm.description} onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Delivery, Trucking, Sacks" /></div>
+              <div className="field"><label>Description</label><input value={expenseForm.description} onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Delivery, Trucking" /></div>
               <div className="row-2">
                 <div className="field"><label>Amount</label><input value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="0.00" /></div>
                 <div className="field"><label>Date</label><input type="date" value={expenseForm.date} onChange={e => setExpenseForm(f => ({ ...f, date: e.target.value }))} /></div>
@@ -205,7 +236,6 @@ export default function ListingsPage() {
             </div>
           )}
 
-          {/* Total expenses */}
           {expenses.length > 0 && (
             <div className="card mb-2" style={{ background: '#ffe8e8', textAlign: 'center' }}>
               <p className="text-xs text-muted">Total Expenses</p>
@@ -230,7 +260,7 @@ export default function ListingsPage() {
                       </div>
                       <div className="flex gap-1">
                         <button className="btn btn-primary btn-sm" onClick={handleSaveExpense}>Save</button>
-                        <button className="btn btn-ghost btn-sm" onClick={handleCancelExpense}>Cancel</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditingExpenseId(null); setEditExpenseForm(null); }}>Cancel</button>
                       </div>
                     </div>
                   ) : (
@@ -240,9 +270,9 @@ export default function ListingsPage() {
                         <p style={{ fontWeight: 800, color: 'var(--sell)' }}>₱{parseFloat(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                       </div>
                       <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-muted">{new Date(exp.date).toLocaleDateString()}</span>
+                        <span className="text-xs text-muted">{exp.date}</span>
                         <div className="flex gap-1">
-                          <button className="btn btn-outline btn-sm" onClick={() => handleEditExpense(exp)}>Edit</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => { setEditingExpenseId(exp.id); setEditExpenseForm({ ...exp }); }}>Edit</button>
                           <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDeleteExpense(exp.id)}>Delete</button>
                         </div>
                       </div>
@@ -260,28 +290,21 @@ export default function ListingsPage() {
       {/* === CAPITAL TAB === */}
       {tab === 'capital' && (
         <>
-          {/* Add capital form */}
           {showCapitalForm && (
             <div className="card mb-2">
               <p className="text-sm font-bold mb-1">New Capital Entry</p>
-              <div className="field"><label>Description</label><input value={capitalForm.description} onChange={e => setCapitalForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Initial investment, Loan, Top-up" /></div>
+              <div className="field"><label>Description</label><input value={capitalForm.description} onChange={e => setCapitalForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Initial investment, Loan" /></div>
               <div className="row-2">
                 <div className="field"><label>Amount</label><input value={capitalForm.amount} onChange={e => setCapitalForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="0.00" /></div>
                 <div className="field"><label>Date</label><input type="date" value={capitalForm.date} onChange={e => setCapitalForm(f => ({ ...f, date: e.target.value }))} /></div>
               </div>
               <div className="flex gap-1">
-                <button className="btn btn-primary btn-sm" onClick={() => {
-                  if (!capitalForm.description || !capitalForm.amount || !capitalForm.date) return;
-                  setCapitals(prev => [{ id: Date.now().toString(), ...capitalForm }, ...prev]);
-                  setCapitalForm({ description: '', amount: '', date: '' });
-                  setShowCapitalForm(false);
-                }}>Add</button>
+                <button className="btn btn-primary btn-sm" onClick={handleAddCapital}>Add</button>
                 <button className="btn btn-ghost btn-sm" onClick={() => setShowCapitalForm(false)}>Cancel</button>
               </div>
             </div>
           )}
 
-          {/* Total capital */}
           {capitals.length > 0 && (
             <div className="card mb-2" style={{ background: '#dbeafe', textAlign: 'center' }}>
               <p className="text-xs text-muted">Total Capital</p>
@@ -305,12 +328,7 @@ export default function ListingsPage() {
                         <div className="field"><label>Date</label><input type="date" value={editCapitalForm.date} onChange={e => setEditCapitalForm(f => f ? { ...f, date: e.target.value } : f)} /></div>
                       </div>
                       <div className="flex gap-1">
-                        <button className="btn btn-primary btn-sm" onClick={() => {
-                          if (!editCapitalForm) return;
-                          setCapitals(prev => prev.map(c => c.id === editCapitalForm.id ? editCapitalForm : c));
-                          setEditingCapitalId(null);
-                          setEditCapitalForm(null);
-                        }}>Save</button>
+                        <button className="btn btn-primary btn-sm" onClick={handleSaveCapital}>Save</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => { setEditingCapitalId(null); setEditCapitalForm(null); }}>Cancel</button>
                       </div>
                     </div>
@@ -321,10 +339,10 @@ export default function ListingsPage() {
                         <p style={{ fontWeight: 800, color: '#1e40af' }}>₱{parseFloat(cap.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                       </div>
                       <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-muted">{new Date(cap.date).toLocaleDateString()}</span>
+                        <span className="text-xs text-muted">{cap.date}</span>
                         <div className="flex gap-1">
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditingCapitalId(cap.id); setEditCapitalForm({ ...cap }); }}>Edit</button>
-                          <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => { if (confirm('Delete this capital entry?')) setCapitals(prev => prev.filter(c => c.id !== cap.id)); }}>Delete</button>
+                          <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDeleteCapital(cap.id)}>Delete</button>
                         </div>
                       </div>
                     </div>
