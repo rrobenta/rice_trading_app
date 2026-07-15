@@ -18,6 +18,8 @@ interface SaleItem {
   quantitySold: string;
   pricePerUnit: string;
   totalAmount: number;
+  description: string;
+  customerName: string;
   date: string;
 }
 
@@ -26,9 +28,9 @@ export default function SalesPage() {
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [sales, setSales] = useState<SaleItem[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ listingTitle: '', quantitySold: '', pricePerUnit: '', date: '' });
+  const [form, setForm] = useState({ listingTitle: '', quantitySold: '', pricePerUnit: '', description: '', customerName: '', date: '' });
+  const [saving, setSaving] = useState(false);
 
-  // Load listings (for dropdown) and sales
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
@@ -48,7 +50,6 @@ export default function SalesPage() {
     return () => { unsubListings(); unsubSales(); };
   }, [user]);
 
-  // When user selects a listing, auto-fill the sell price
   const handleSelectListing = (title: string) => {
     const listing = listings.find(l => l.title === title);
     setForm(f => ({
@@ -60,18 +61,27 @@ export default function SalesPage() {
 
   const handleAddSale = async () => {
     if (!form.listingTitle || !form.quantitySold || !form.pricePerUnit || !form.date || !user) return;
-    const totalAmount = parseFloat(form.pricePerUnit) * parseInt(form.quantitySold, 10);
-    await addDoc(collection(db, 'sales'), {
-      listingTitle: form.listingTitle,
-      quantitySold: form.quantitySold,
-      pricePerUnit: form.pricePerUnit,
-      totalAmount,
-      date: form.date,
-      uid: user.uid,
-      createdAt: new Date(),
-    });
-    setForm({ listingTitle: '', quantitySold: '', pricePerUnit: '', date: '' });
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const totalAmount = parseFloat(form.pricePerUnit) * parseInt(form.quantitySold, 10);
+      await addDoc(collection(db, 'sales'), {
+        listingTitle: form.listingTitle,
+        quantitySold: form.quantitySold,
+        pricePerUnit: form.pricePerUnit,
+        totalAmount,
+        description: form.description,
+        customerName: form.customerName,
+        date: form.date,
+        uid: user.uid,
+        createdAt: new Date(),
+      });
+      setForm({ listingTitle: '', quantitySold: '', pricePerUnit: '', description: '', customerName: '', date: '' });
+      setShowForm(false);
+    } catch (err: any) {
+      alert('Failed to save: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -107,7 +117,7 @@ export default function SalesPage() {
           <p className="text-sm font-bold mb-1">Record a Sale</p>
 
           <div className="field">
-            <label>Item (from listings)</label>
+            <label>Item (from listings) *</label>
             <select value={form.listingTitle} onChange={e => handleSelectListing(e.target.value)}>
               <option value="">Select an item…</option>
               {listings.map(l => (
@@ -118,17 +128,27 @@ export default function SalesPage() {
 
           <div className="row-2">
             <div className="field">
-              <label>Qty Sold</label>
+              <label>Qty Sold *</label>
               <input value={form.quantitySold} onChange={e => setForm(f => ({ ...f, quantitySold: e.target.value }))} type="number" min="1" placeholder="e.g. 10" />
             </div>
             <div className="field">
-              <label>Price/Unit</label>
+              <label>Price/Unit *</label>
               <input value={form.pricePerUnit} onChange={e => setForm(f => ({ ...f, pricePerUnit: e.target.value }))} type="number" step="0.01" placeholder="Auto from listing" />
             </div>
           </div>
 
           <div className="field">
-            <label>Date</label>
+            <label>Description</label>
+            <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Bulk order, retail sale" />
+          </div>
+
+          <div className="field">
+            <label>Customer Name (optional)</label>
+            <input value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} placeholder="e.g. Juan Dela Cruz" />
+          </div>
+
+          <div className="field">
+            <label>Date *</label>
             <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
           </div>
 
@@ -142,7 +162,7 @@ export default function SalesPage() {
           )}
 
           <div className="flex gap-1">
-            <button className="btn btn-primary btn-sm" onClick={handleAddSale}>Save Sale</button>
+            <button className="btn btn-primary btn-sm" onClick={handleAddSale} disabled={saving}>{saving ? 'Saving…' : 'Save Sale'}</button>
             <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </div>
@@ -163,12 +183,12 @@ export default function SalesPage() {
                 <p style={{ fontWeight: 700 }}>{s.listingTitle}</p>
                 <p style={{ fontWeight: 800, color: 'var(--buy)' }}>₱{(s.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="flex justify-between items-center mt-1">
-                <div className="flex gap-2">
-                  <span className="text-xs text-muted">{s.quantitySold} units × ₱{parseFloat(s.pricePerUnit).toFixed(2)}</span>
-                </div>
+              <div className="flex gap-2 mt-1">
+                <span className="text-xs text-muted">{s.quantitySold} units × ₱{parseFloat(s.pricePerUnit).toFixed(2)}</span>
                 <span className="text-xs text-muted">{s.date}</span>
               </div>
+              {s.description && <p className="text-xs text-muted mt-1">{s.description}</p>}
+              {s.customerName && <p className="text-xs mt-1" style={{ color: 'var(--primary)' }}>👤 {s.customerName}</p>}
               <div className="flex mt-1" style={{ justifyContent: 'flex-end' }}>
                 <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDelete(s.id)}>Delete</button>
               </div>
