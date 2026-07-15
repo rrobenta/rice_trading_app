@@ -6,7 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ListingsPage from './pages/ListingsPage';
 import CreateListingPage from './pages/CreateListingPage';
-import OrdersPage from './pages/OrdersPage';
+import SalesPage from './pages/SalesPage';
 import ProfilePage from './pages/ProfilePage';
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="listings" element={<ListingsPage />} />
         <Route path="listings/new" element={<CreateListingPage />} />
-        <Route path="orders" element={<OrdersPage />} />
+        <Route path="sales" element={<SalesPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
     </Routes>

@@ -3,55 +3,89 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 
+interface StockItem {
+  title: string;
+  totalStock: number;
+  totalSold: number;
+  available: number;
+  sellPrice: string;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [stocks, setStocks] = useState(0);
+  const [stockSummary, setStockSummary] = useState<StockItem[]>([]);
   const [grossIncome, setGrossIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
-  const [listings, setListings] = useState<any[]>([]);
+  const [totalAvailable, setTotalAvailable] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
 
-    let unsubListings: (() => void) | undefined;
-    let unsubExpenses: (() => void) | undefined;
+    let listings: any[] = [];
+    let sales: any[] = [];
 
-    try {
-      unsubListings = onSnapshot(
-        query(collection(db, 'listings'), where('uid', '==', uid)),
-        (snap) => {
-          const items = snap.docs.map(d => d.data());
-          setListings(items);
-          const totalQty = items.reduce((sum, l) => sum + parseInt(l.quantity || '0', 10), 0);
-          setStocks(totalQty);
-          const totalSales = items.reduce((sum, l) => sum + (parseFloat(l.sellPrice || '0') * parseInt(l.quantity || '0', 10)), 0);
-          setGrossIncome(totalSales);
-        },
-        (err) => console.warn('Listings query error:', err)
-      );
+    const computeSummary = () => {
+      const stockMap: Record<string, StockItem> = {};
 
-      unsubExpenses = onSnapshot(
-        query(collection(db, 'expenses'), where('uid', '==', uid)),
-        (snap) => {
-          const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
-          setExpenses(total);
-        },
-        (err) => console.warn('Expenses query error:', err)
-      );
-    } catch (err) {
-      console.warn('Firestore setup error:', err);
-    }
+      // Add all listing quantities
+      listings.forEach(l => {
+        const title = l.title || 'Unknown';
+        if (!stockMap[title]) {
+          stockMap[title] = { title, totalStock: 0, totalSold: 0, available: 0, sellPrice: l.sellPrice || '0' };
+        }
+        stockMap[title].totalStock += parseInt(l.quantity || '0', 10);
+        stockMap[title].sellPrice = l.sellPrice || stockMap[title].sellPrice;
+      });
 
-    return () => { unsubListings?.(); unsubExpenses?.(); };
+      // Subtract sold quantities
+      sales.forEach(s => {
+        const title = s.listingTitle || 'Unknown';
+        if (!stockMap[title]) {
+          stockMap[title] = { title, totalStock: 0, totalSold: 0, available: 0, sellPrice: '0' };
+        }
+        stockMap[title].totalSold += parseInt(s.quantitySold || '0', 10);
+      });
+
+      // Compute available
+      Object.values(stockMap).forEach(item => {
+        item.available = Math.max(0, item.totalStock - item.totalSold);
+      });
+
+      const items = Object.values(stockMap).sort((a, b) => b.available - a.available);
+      setStockSummary(items);
+      setTotalAvailable(items.reduce((sum, i) => sum + i.available, 0));
+
+      // Gross income = total sales revenue
+      const revenue = sales.reduce((sum: number, s: any) => sum + (parseFloat(s.totalAmount || '0')), 0);
+      setGrossIncome(revenue);
+    };
+
+    const unsubListings = onSnapshot(
+      query(collection(db, 'listings'), where('uid', '==', uid)),
+      (snap) => { listings = snap.docs.map(d => d.data()); computeSummary(); },
+      () => {}
+    );
+
+    const unsubSales = onSnapshot(
+      query(collection(db, 'sales'), where('uid', '==', uid)),
+      (snap) => { sales = snap.docs.map(d => d.data()); computeSummary(); },
+      () => {}
+    );
+
+    const unsubExpenses = onSnapshot(
+      query(collection(db, 'expenses'), where('uid', '==', uid)),
+      (snap) => {
+        const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
+        setExpenses(total);
+      },
+      () => {}
+    );
+
+    return () => { unsubListings(); unsubSales(); unsubExpenses(); };
   }, [user]);
 
   const netIncome = grossIncome - expenses;
-
-  // Fast moving: sort by quantity descending, show top 3
-  const fastMoving = [...listings]
-    .sort((a, b) => parseInt(b.quantity || '0', 10) - parseInt(a.quantity || '0', 10))
-    .slice(0, 3);
 
   return (
     <div>
@@ -61,13 +95,13 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <p className="text-xs text-muted">Available Stocks</p>
-          <p style={{ fontSize: 26, fontWeight: 800, color: 'var(--primary)' }}>{stocks}</p>
-          <p className="text-xs text-muted">units</p>
+          <p style={{ fontSize: 26, fontWeight: 800, color: 'var(--primary)' }}>{totalAvailable}</p>
+          <p className="text-xs text-muted">units total</p>
         </div>
         <div className="card" style={{ textAlign: 'center' }}>
-          <p className="text-xs text-muted">Fast Moving</p>
-          <p style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent)' }}>{fastMoving.length}</p>
-          <p className="text-xs text-muted">items</p>
+          <p className="text-xs text-muted">Items Tracked</p>
+          <p style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent)' }}>{stockSummary.length}</p>
+          <p className="text-xs text-muted">products</p>
         </div>
       </div>
 
@@ -76,7 +110,7 @@ export default function DashboardPage() {
         <div className="card">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-xs text-muted">Gross Income</p>
+              <p className="text-xs text-muted">Gross Income (Sales)</p>
               <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--buy)' }}>₱ {grossIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             </div>
             <span style={{ fontSize: 28 }}>📈</span>
@@ -104,21 +138,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Fast Moving Items */}
-      <h2 className="text-sm font-bold mb-1">Fast Moving Items</h2>
-      {fastMoving.length === 0 ? (
+      {/* Per-item stock summary */}
+      <h2 className="text-sm font-bold mb-1">Stock Summary (per item)</h2>
+      {stockSummary.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <p className="text-xs text-muted">No listings yet. Add items to see your top movers here.</p>
+          <p className="text-xs text-muted">No items yet. Add listings to track your stock.</p>
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          {fastMoving.map((item, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderBottom: i < fastMoving.length - 1 ? '1px solid var(--border)' : 'none' }}>
+          {/* Header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+            <span className="text-xs font-bold text-muted">Item</span>
+            <span className="text-xs font-bold text-muted" style={{ width: 50, textAlign: 'right' }}>Stock</span>
+            <span className="text-xs font-bold text-muted" style={{ width: 50, textAlign: 'right' }}>Sold</span>
+            <span className="text-xs font-bold text-muted" style={{ width: 60, textAlign: 'right' }}>Available</span>
+          </div>
+          {stockSummary.map((item, i) => (
+            <div key={item.title} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, padding: '10px 14px', borderBottom: i < stockSummary.length - 1 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
               <div>
                 <p className="text-sm font-bold">{item.title}</p>
-                <p className="text-xs text-muted">{item.quantity} units in stock</p>
+                <p className="text-xs text-muted">₱{parseFloat(item.sellPrice).toFixed(2)}/unit</p>
               </div>
-              <span className={`badge ${i === 0 ? 'badge-green' : 'badge-yellow'}`}>{i === 0 ? 'Top' : 'Moving'}</span>
+              <span className="text-sm" style={{ width: 50, textAlign: 'right' }}>{item.totalStock}</span>
+              <span className="text-sm" style={{ width: 50, textAlign: 'right', color: 'var(--sell)' }}>{item.totalSold}</span>
+              <span className="text-sm font-bold" style={{ width: 60, textAlign: 'right', color: item.available > 0 ? 'var(--primary)' : 'var(--sell)' }}>
+                {item.available}
+              </span>
             </div>
           ))}
         </div>
