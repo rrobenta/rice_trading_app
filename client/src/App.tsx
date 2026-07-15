@@ -33,11 +33,9 @@ function AppRoutes() {
   );
 }
 
-const BASE = import.meta.env.BASE_URL;
-
 export default function App() {
   return (
-    <BrowserRouter basename={BASE}>
+    <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
