@@ -14,27 +14,36 @@ export default function DashboardPage() {
     if (!user) return;
     const uid = user.uid;
 
-    const unsubListings = onSnapshot(
-      query(collection(db, 'listings'), where('uid', '==', uid)),
-      (snap) => {
-        const items = snap.docs.map(d => d.data());
-        setListings(items);
-        const totalQty = items.reduce((sum, l) => sum + parseInt(l.quantity || '0', 10), 0);
-        setStocks(totalQty);
-        const totalSales = items.reduce((sum, l) => sum + (parseFloat(l.sellPrice || '0') * parseInt(l.quantity || '0', 10)), 0);
-        setGrossIncome(totalSales);
-      }
-    );
+    let unsubListings: (() => void) | undefined;
+    let unsubExpenses: (() => void) | undefined;
 
-    const unsubExpenses = onSnapshot(
-      query(collection(db, 'expenses'), where('uid', '==', uid)),
-      (snap) => {
-        const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
-        setExpenses(total);
-      }
-    );
+    try {
+      unsubListings = onSnapshot(
+        query(collection(db, 'listings'), where('uid', '==', uid)),
+        (snap) => {
+          const items = snap.docs.map(d => d.data());
+          setListings(items);
+          const totalQty = items.reduce((sum, l) => sum + parseInt(l.quantity || '0', 10), 0);
+          setStocks(totalQty);
+          const totalSales = items.reduce((sum, l) => sum + (parseFloat(l.sellPrice || '0') * parseInt(l.quantity || '0', 10)), 0);
+          setGrossIncome(totalSales);
+        },
+        (err) => console.warn('Listings query error:', err)
+      );
 
-    return () => { unsubListings(); unsubExpenses(); };
+      unsubExpenses = onSnapshot(
+        query(collection(db, 'expenses'), where('uid', '==', uid)),
+        (snap) => {
+          const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
+          setExpenses(total);
+        },
+        (err) => console.warn('Expenses query error:', err)
+      );
+    } catch (err) {
+      console.warn('Firestore setup error:', err);
+    }
+
+    return () => { unsubListings?.(); unsubExpenses?.(); };
   }, [user]);
 
   const netIncome = grossIncome - expenses;
