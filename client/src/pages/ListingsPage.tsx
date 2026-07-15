@@ -4,6 +4,7 @@ import {
   collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { STORE_ID } from '../lib/store';
 import { useAuth } from '../context/AuthContext';
 
 interface ListingItem {
@@ -56,20 +57,19 @@ export default function ListingsPage() {
   // === Firestore listeners ===
   useEffect(() => {
     if (!user) return;
-    const uid = user.uid;
 
     const unsubListings = onSnapshot(
-      query(collection(db, 'listings'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      query(collection(db, 'listings'), where('storeId', '==', STORE_ID), orderBy('createdAt', 'desc')),
       (snap) => setListings(snap.docs.map(d => ({ id: d.id, ...d.data() } as ListingItem)))
     );
 
     const unsubExpenses = onSnapshot(
-      query(collection(db, 'expenses'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      query(collection(db, 'expenses'), where('storeId', '==', STORE_ID), orderBy('createdAt', 'desc')),
       (snap) => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as ExpenseItem)))
     );
 
     const unsubCapitals = onSnapshot(
-      query(collection(db, 'capitals'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      query(collection(db, 'capitals'), where('storeId', '==', STORE_ID), orderBy('createdAt', 'desc')),
       (snap) => setCapitals(snap.docs.map(d => ({ id: d.id, ...d.data() } as CapitalItem)))
     );
 
@@ -107,7 +107,7 @@ export default function ListingsPage() {
   // === Expenses CRUD ===
   const handleAddExpense = async () => {
     if (!expenseForm.description || !expenseForm.amount || !expenseForm.date || !user) return;
-    await addDoc(collection(db, 'expenses'), { ...expenseForm, uid: user.uid, createdAt: new Date() });
+    await addDoc(collection(db, 'expenses'), { ...expenseForm, storeId: STORE_ID, uid: user.uid, createdAt: new Date() });
     setExpenseForm({ description: '', amount: '', date: '' });
     setShowExpenseForm(false);
   };
@@ -128,7 +128,7 @@ export default function ListingsPage() {
   // === Capital CRUD ===
   const handleAddCapital = async () => {
     if (!capitalForm.description || !capitalForm.amount || !capitalForm.date || !user) return;
-    await addDoc(collection(db, 'capitals'), { ...capitalForm, uid: user.uid, createdAt: new Date() });
+    await addDoc(collection(db, 'capitals'), { ...capitalForm, storeId: STORE_ID, uid: user.uid, createdAt: new Date() });
     setCapitalForm({ description: '', amount: '', date: '' });
     setShowCapitalForm(false);
   };

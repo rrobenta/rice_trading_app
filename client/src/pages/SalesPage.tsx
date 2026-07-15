@@ -3,6 +3,7 @@ import {
   collection, addDoc, deleteDoc, doc, query, where, onSnapshot, orderBy,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { STORE_ID } from '../lib/store';
 import { useAuth } from '../context/AuthContext';
 
 interface ListingItem {
@@ -33,16 +34,15 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (!user) return;
-    const uid = user.uid;
 
     const unsubListings = onSnapshot(
-      query(collection(db, 'listings'), where('uid', '==', uid)),
+      query(collection(db, 'listings'), where('storeId', '==', STORE_ID)),
       (snap) => setListings(snap.docs.map(d => ({ id: d.id, ...d.data() } as ListingItem))),
       () => {}
     );
 
     const unsubSales = onSnapshot(
-      query(collection(db, 'sales'), where('uid', '==', uid), orderBy('createdAt', 'desc')),
+      query(collection(db, 'sales'), where('storeId', '==', STORE_ID), orderBy('createdAt', 'desc')),
       (snap) => setSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as SaleItem))),
       () => {}
     );
@@ -72,6 +72,7 @@ export default function SalesPage() {
         description: form.description,
         customerName: form.customerName,
         date: form.date,
+        storeId: STORE_ID,
         uid: user.uid,
         createdAt: new Date(),
       });

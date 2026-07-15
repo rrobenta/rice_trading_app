@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { STORE_ID } from '../lib/store';
 import { useAuth } from '../context/AuthContext';
 
 interface StockItem {
@@ -20,7 +21,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    const uid = user.uid;
 
     let listings: any[] = [];
     let sales: any[] = [];
@@ -28,7 +28,6 @@ export default function DashboardPage() {
     const computeSummary = () => {
       const stockMap: Record<string, StockItem> = {};
 
-      // Add all listing quantities
       listings.forEach(l => {
         const title = l.title || 'Unknown';
         if (!stockMap[title]) {
@@ -38,7 +37,6 @@ export default function DashboardPage() {
         stockMap[title].sellPrice = l.sellPrice || stockMap[title].sellPrice;
       });
 
-      // Subtract sold quantities
       sales.forEach(s => {
         const title = s.listingTitle || 'Unknown';
         if (!stockMap[title]) {
@@ -47,7 +45,6 @@ export default function DashboardPage() {
         stockMap[title].totalSold += parseInt(s.quantitySold || '0', 10);
       });
 
-      // Compute available
       Object.values(stockMap).forEach(item => {
         item.available = Math.max(0, item.totalStock - item.totalSold);
       });
@@ -56,25 +53,24 @@ export default function DashboardPage() {
       setStockSummary(items);
       setTotalAvailable(items.reduce((sum, i) => sum + i.available, 0));
 
-      // Gross income = total sales revenue
       const revenue = sales.reduce((sum: number, s: any) => sum + (parseFloat(s.totalAmount || '0')), 0);
       setGrossIncome(revenue);
     };
 
     const unsubListings = onSnapshot(
-      query(collection(db, 'listings'), where('uid', '==', uid)),
+      query(collection(db, 'listings'), where('storeId', '==', STORE_ID)),
       (snap) => { listings = snap.docs.map(d => d.data()); computeSummary(); },
       () => {}
     );
 
     const unsubSales = onSnapshot(
-      query(collection(db, 'sales'), where('uid', '==', uid)),
+      query(collection(db, 'sales'), where('storeId', '==', STORE_ID)),
       (snap) => { sales = snap.docs.map(d => d.data()); computeSummary(); },
       () => {}
     );
 
     const unsubExpenses = onSnapshot(
-      query(collection(db, 'expenses'), where('uid', '==', uid)),
+      query(collection(db, 'expenses'), where('storeId', '==', STORE_ID)),
       (snap) => {
         const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
         setExpenses(total);

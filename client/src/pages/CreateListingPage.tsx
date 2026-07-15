@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { STORE_ID } from '../lib/store';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateListingPage() {
@@ -21,6 +22,7 @@ export default function CreateListingPage() {
     try {
       await addDoc(collection(db, 'listings'), {
         ...form,
+        storeId: STORE_ID,
         uid: user.uid,
         createdAt: new Date(),
       });
