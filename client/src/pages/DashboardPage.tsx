@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [stockSummary, setStockSummary] = useState<StockItem[]>([]);
   const [grossIncome, setGrossIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
+  const [capital, setCapital] = useState(0);
   const [totalAvailable, setTotalAvailable] = useState(0);
 
   useEffect(() => {
@@ -78,10 +79,19 @@ export default function DashboardPage() {
       () => {}
     );
 
-    return () => { unsubListings(); unsubSales(); unsubExpenses(); };
+    const unsubCapitals = onSnapshot(
+      query(collection(db, 'capitals'), where('storeId', '==', STORE_ID)),
+      (snap) => {
+        const total = snap.docs.reduce((sum, d) => sum + parseFloat(d.data().amount || '0'), 0);
+        setCapital(total);
+      },
+      () => {}
+    );
+
+    return () => { unsubListings(); unsubSales(); unsubExpenses(); unsubCapitals(); };
   }, [user]);
 
-  const netIncome = grossIncome - expenses;
+  const netIncome = grossIncome - expenses - capital;
 
   return (
     <div>
@@ -120,6 +130,16 @@ export default function DashboardPage() {
               <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--sell)' }}>₱ {expenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             </div>
             <span style={{ fontSize: 28 }}>📉</span>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-xs text-muted">Capital</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: '#1e40af' }}>₱ {capital.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            </div>
+            <span style={{ fontSize: 28 }}>🏦</span>
           </div>
         </div>
 
