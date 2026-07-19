@@ -39,6 +39,8 @@ export default function ListingsPage() {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ListingItem | null>(null);
+  const [addStockId, setAddStockId] = useState<string | null>(null);
+  const [addStockQty, setAddStockQty] = useState('');
 
   // Expenses
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -93,6 +95,15 @@ export default function ListingsPage() {
     await updateDoc(doc(db, 'listings', id), data);
     setEditingId(null);
     setEditForm(null);
+  };
+
+  const handleAddStock = async (id: string, currentQty: string) => {
+    const extra = parseInt(addStockQty, 10);
+    if (!extra || extra <= 0) return;
+    const newQty = (parseInt(currentQty || '0', 10) + extra).toString();
+    await updateDoc(doc(db, 'listings', id), { quantity: newQty });
+    setAddStockId(null);
+    setAddStockQty('');
   };
 
   const setField = (key: keyof ListingItem) => (e: any) => {
@@ -203,7 +214,16 @@ export default function ListingsPage() {
                           Profit: ₱{(parseFloat(l.sellPrice) - parseFloat(l.boughtFor)).toFixed(2)}
                         </span>
                       </div>
+                      {/* Add Stock inline */}
+                      {addStockId === l.id ? (
+                        <div className="flex gap-1 items-center mt-1" style={{ background: 'var(--bg)', padding: '8px 10px', borderRadius: 8 }}>
+                          <input value={addStockQty} onChange={e => setAddStockQty(e.target.value)} type="number" min="1" placeholder="Qty to add" style={{ flex: 1, padding: '6px 10px', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 14 }} />
+                          <button className="btn btn-primary btn-sm" onClick={() => handleAddStock(l.id, l.quantity)}>Add</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => { setAddStockId(null); setAddStockQty(''); }}>✕</button>
+                        </div>
+                      ) : null}
                       <div className="flex gap-1 mt-1" style={{ justifyContent: 'flex-end' }}>
+                        <button className="btn btn-sm" style={{ background: 'var(--primary-light)', color: '#fff' }} onClick={() => { setAddStockId(l.id); setAddStockQty(''); }}>+ Stock</button>
                         <button className="btn btn-outline btn-sm" onClick={() => handleEditListing(l)}>Edit</button>
                         <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => handleDeleteListing(l.id)}>Delete</button>
                       </div>
