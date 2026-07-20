@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [grossIncome, setGrossIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [capital, setCapital] = useState(0);
+  const [costOfGoods, setCostOfGoods] = useState(0);
   const [totalAvailable, setTotalAvailable] = useState(0);
 
   useEffect(() => {
@@ -56,6 +57,9 @@ export default function DashboardPage() {
 
       const revenue = sales.reduce((sum: number, s: any) => sum + (parseFloat(s.totalAmount || '0')), 0);
       setGrossIncome(revenue);
+
+      const cogs = listings.reduce((sum: number, l: any) => sum + (parseFloat(l.boughtFor || '0') * parseInt(l.quantity || '0', 10)), 0);
+      setCostOfGoods(cogs);
     };
 
     const unsubListings = onSnapshot(
@@ -92,6 +96,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const netIncome = grossIncome - expenses - capital;
+  const cashOnHand = capital + grossIncome - expenses - costOfGoods;
 
   return (
     <div>
@@ -109,6 +114,13 @@ export default function DashboardPage() {
           <p style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent)' }}>{stockSummary.length}</p>
           <p className="text-xs text-muted">products</p>
         </div>
+      </div>
+
+      {/* Cash on Hand */}
+      <div className="card mb-2" style={{ background: cashOnHand >= 0 ? '#dbeafe' : '#ffe8e8', textAlign: 'center' }}>
+        <p className="text-xs text-muted">Cash on Hand</p>
+        <p style={{ fontSize: 28, fontWeight: 800, color: cashOnHand >= 0 ? '#1e40af' : 'var(--sell)' }}>₱ {cashOnHand.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        <p className="text-xs text-muted" style={{ marginTop: 4 }}>Capital + Sales − Expenses − Purchase Cost</p>
       </div>
 
       {/* Income / Expenses */}
@@ -143,6 +155,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        <div className="card">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-xs text-muted">Cost of Goods Purchased</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>₱ {costOfGoods.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            </div>
+            <span style={{ fontSize: 28 }}>📦</span>
+          </div>
+        </div>
+
         <div className="card" style={{ background: netIncome >= 0 ? '#e8f5e9' : '#ffe8e8' }}>
           <div className="flex justify-between items-center">
             <div>
@@ -162,7 +184,6 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          {/* Header */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
             <span className="text-xs font-bold text-muted">Item</span>
             <span className="text-xs font-bold text-muted" style={{ width: 50, textAlign: 'right' }}>Stock</span>
